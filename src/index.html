@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Arbeitszeitrechner &amp; Stundenrechner – mit Pause, kostenlos</title>
-<meta name="description" content="Arbeitszeit und Stunden berechnen: mit Pausen, Nachtschicht, Woche &amp; Monat, Dezimal und Lohn. Kostenlos, ohne Anmeldung, Export als Excel.">
+<title>Arbeitszeitrechner &amp; Stundenrechner online – mit Pause</title>
+<meta name="description" content="Arbeitszeit und Arbeitsstunden online berechnen: mit Pausen, Woche &amp; Monat, Industrieminuten und Lohn. Kostenlos, ohne Anmeldung, Excel-Export.">
 <link rel="canonical" href="{{URL}}/">
 <meta name="theme-color" content="#0b5cad" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0f1720" media="(prefers-color-scheme: dark)">
@@ -16,8 +16,8 @@
 <meta property="og:type" content="website">
 <meta property="og:locale" content="de_DE">
 <meta property="og:site_name" content="derarbeitszeitrechner.de">
-<meta property="og:title" content="Arbeitszeitrechner &amp; Stundenrechner – mit Pause, kostenlos">
-<meta property="og:description" content="Arbeitszeit mit Pausen, Nachtschicht, Woche, Monat, Dezimal und Lohn berechnen. Kostenlos, ohne Anmeldung.">
+<meta property="og:title" content="Arbeitszeitrechner &amp; Stundenrechner online – mit Pause">
+<meta property="og:description" content="Arbeitszeit und Arbeitsstunden online berechnen: mit Pausen, Woche, Monat, Industrieminuten und Lohn. Kostenlos, ohne Anmeldung.">
 <meta property="og:url" content="{{URL}}/">
 <meta property="og:image" content="{{URL}}/og.png">
 <meta property="og:image:width" content="1200">
@@ -40,6 +40,7 @@
     <nav class="topnav" aria-label="Seitenbereiche">
       <a href="#ratgeber">Ratgeber</a>
       <a href="#faq">FAQ</a>
+      {{NAV_TOOLS}}
     </nav>
   </div>
 </header>
@@ -48,7 +49,7 @@
 <section class="hero" id="rechner" aria-labelledby="h1">
   <div class="wrap">
     <h1 id="h1">Arbeitszeitrechner</h1>
-    <p class="sub">Stundenrechner mit Pausen, Woche, Monat und Lohn – kostenlos und ohne Anmeldung</p>
+    <p class="sub">Stundenrechner online: Arbeitsstunden mit Pausen, Woche, Monat und Lohn berechnen – kostenlos und ohne Anmeldung</p>
 
     <div class="card shared" id="shared" hidden></div>
     <div class="card calc" id="calc">
@@ -185,7 +186,7 @@
 
       <!-- FEIERABEND -->
       <div role="tabpanel" id="feierabend" aria-labelledby="tab-feierabend" class="panel" hidden>
-        <p class="lead">Wann kann ich gehen? Beginn und Sollzeit eingeben – die Pflichtpause wird automatisch eingerechnet.</p>
+        <p class="lead">Feierabendrechner: Wann kann ich gehen? Beginn und Sollzeit eingeben – die Pflichtpause wird automatisch eingerechnet.</p>
         <div class="times">
           <div class="field">
             <label for="f-start">Beginn</label>
@@ -230,6 +231,7 @@
 
       <!-- DEZIMAL -->
       <div role="tabpanel" id="dezimal" aria-labelledby="tab-dezimal" class="panel" hidden>
+        <p class="lead">Dezimal- und Industrieminuten-Rechner: Stunden und Minuten in Dezimalstunden umrechnen – und zurück.</p>
         <div class="conv">
           <div class="field">
             <label for="z-hm">Stunden und Minuten (h:mm)</label>
@@ -256,7 +258,7 @@
 
       <!-- LOHN -->
       <div role="tabpanel" id="lohn" aria-labelledby="tab-lohn" class="panel" hidden>
-        <p class="lead">Gehalts-Stundenrechner: Monatsgehalt in Stundenlohn umrechnen – und umgekehrt.</p>
+        <p class="lead">Monatsgehalt in Stundenlohn umrechnen – und umgekehrt. Mit Tabelle, Minijob-Check und Jahresgehalt: <a href="/stundenlohnrechner">zum Stundenlohnrechner</a>.</p>
         <div class="times">
           <div class="field">
             <label for="g-salary">Monatsgehalt brutto (€)</label>
@@ -344,16 +346,17 @@
     <ul class="trust" aria-label="Vorteile"><li>Kostenlos</li><li>Ohne Anmeldung</li><li>Daten bleiben im Browser</li><li>Prüfung nach Arbeitszeitgesetz</li></ul>
     <p class="install" id="install-box" hidden><button type="button" class="btn-ghost" id="install">App installieren</button> <span class="hint">Legt den Rechner als App auf deinen Startbildschirm – funktioniert dann auch offline.</span></p>
     <p class="disclaimer">Ergebnis ohne Gewähr, keine Rechtsberatung. Tarifverträge und Betriebsvereinbarungen können abweichen.</p>
+    {{MORE_TOOLS}}
   </div>
 </section>
 
 <div class="wrap content" id="ratgeber">
 <article>
 <section aria-labelledby="h-berechnen">
-<h2 id="h-berechnen">So berechnest du deine Arbeitszeit</h2>
-<p>Wenn du deine Arbeitszeit berechnen willst, brauchst du nur drei Angaben: Arbeitsbeginn, Arbeitsende und Pausen. Die Arbeitszeit ist die Zeit zwischen Beginn und Ende – abzüglich aller Pausen. So kannst du deine tägliche Arbeitszeit berechnen:</p>
+<h2 id="h-berechnen">So berechnest du deine Arbeitszeit und Arbeitsstunden</h2>
+<p>Deine Arbeitszeit ist die Zeit zwischen Arbeitsbeginn und Arbeitsende, abzüglich aller Pausen. Um deine Arbeitsstunden zu berechnen, brauchst du also nur drei Angaben: Beginn, Ende und Pausen. So kannst du deine tägliche Arbeitszeit berechnen:</p>
 <p class="formula"><strong>Arbeitszeit = (Ende − Beginn) − Pausen</strong></p>
-<p>Der Arbeitszeitrechner oben ist ein Stundenrechner online für Arbeit und Arbeitszeit – egal ob Vollzeit, Teilzeit, Gleitzeit, Schichtdienst oder Minijob. Er erledigt die Rechnung live beim Tippen: Du gibst Beginn und Ende ein, trägst eine oder mehrere Pausen ein und siehst sofort das Ergebnis in Stunden und Minuten und als Dezimalzahl. Endet deine Schicht nach Mitternacht, erkennt der Rechner das automatisch und rechnet das Ende in den nächsten Tag (Hinweis „+1 Tag“).</p>
+<p>Der Arbeitszeitrechner online oben ist zugleich Stundenrechner und Arbeitsstunden-Rechner für Arbeit und Arbeitszeit – egal ob Vollzeit, Teilzeit, Gleitzeit, Schichtdienst oder Minijob. Er erledigt die Rechnung live beim Tippen: Du gibst Beginn und Ende ein, trägst eine oder mehrere Pausen ein und siehst sofort das Ergebnis in Stunden und Minuten und als Dezimalzahl. Als Zeitrechner von–bis zeigt er die Stunden und Minuten zwischen zwei Uhrzeiten, mit oder ohne Pause. Endet deine Schicht nach Mitternacht, erkennt der Rechner das automatisch und rechnet das Ende in den nächsten Tag (Hinweis „+1 Tag“).</p>
 <h3>Beispiel 1: normaler Arbeitstag</h3>
 <p>Du arbeitest von 7:30 bis 16:15 Uhr und machst 45 Minuten Mittagspause.</p>
 <ul>
@@ -374,7 +377,7 @@
 
 <section aria-labelledby="h-pause">
 <h2 id="h-pause">Arbeitszeitrechner mit Pause: Wie lange muss die Pause sein?</h2>
-<p>Wie lange deine Pause mindestens sein muss, regelt § 4 des Arbeitszeitgesetzes (ArbZG). Entscheidend ist die reine Arbeitszeit ohne Pausen:</p>
+<p>Bei mehr als 6 Stunden Arbeit sind mindestens 30 Minuten Pause Pflicht, bei mehr als 9 Stunden mindestens 45 Minuten. Das regelt § 4 des Arbeitszeitgesetzes (ArbZG). Entscheidend ist die reine Arbeitszeit ohne Pausen:</p>
 <div class="table-wrap">
 <table>
 <caption>Pflichtpausen nach Arbeitszeitgesetz und Jugendarbeitsschutzgesetz</caption>
@@ -395,8 +398,8 @@
 
 <section aria-labelledby="h-woche">
 <h2 id="h-woche">Wochenarbeitszeit und Monatsstunden berechnen</h2>
-<p>Wochenarbeitszeit berechnen ist einfach: Sie ist die Summe aller Arbeitstage von Montag bis Sonntag. In der Wochenansicht des Rechners trägst du jeden Tag ein und siehst sofort, wie viele Stunden dir zur Sollzeit noch fehlen oder wie viele Überstunden du gemacht hast. Leere Tage zählen dabei als 0 Stunden.</p>
-<p>Für die Monatsstunden gibt es zwei Wege. Arbeitsverträge und Lohnabrechnungen rechnen meist mit dem Durchschnitt: Ein Jahr hat 52 Wochen, geteilt durch 12 Monate ergibt das rund <strong>4,33 Wochen pro Monat</strong>. Die Monatsansicht des Rechners nutzt dagegen den echten Kalender und zählt die tatsächlichen Arbeitstage des Monats. So siehst du dein genaues Soll und deinen Saldo.</p>
+<p>Deine Wochenarbeitszeit ist die Summe aller Arbeitstage von Montag bis Sonntag; mal 4,33 ergibt sie die durchschnittlichen Monatsstunden. Wochenarbeitszeit berechnen ist damit einfach: In der Wochenansicht des Rechners trägst du jeden Tag ein und siehst sofort, wie viele Stunden dir zur Sollzeit noch fehlen oder wie viele Überstunden du gemacht hast. Leere Tage zählen dabei als 0 Stunden.</p>
+<p>Wenn du deine monatliche Arbeitszeit berechnen willst, gibt es zwei Wege. Arbeitsverträge und Lohnabrechnungen rechnen meist mit dem Durchschnitt: Ein Jahr hat 52 Wochen, geteilt durch 12 Monate ergibt das rund <strong>4,33 Wochen pro Monat</strong>. Die Monatsansicht des Rechners nutzt dagegen den echten Kalender und zählt die tatsächlichen Arbeitstage des Monats. So siehst du dein genaues Soll und deinen Saldo.</p>
 <div class="table-wrap">
 <table>
 <caption>Monatliche Arbeitszeit – Tabelle (Wochenstunden × 4,33)</caption>
@@ -411,23 +414,25 @@
 <p>In Gleitzeit zählt oft nur eine Frage: Wann habe ich Feierabend? Im Tab „Feierabend“ gibst du Arbeitsbeginn und Sollzeit ein. Der Rechner addiert die gesetzliche Mindestpause und zeigt dir die früheste Uhrzeit, zu der du gehen kannst – und bis wann du wegen der Höchstarbeitszeit spätestens gehen musst.</p>
 <h3>Urlaub, Krankheit und Feiertage</h3>
 <p>Damit dein Saldo stimmt, kannst du jeden Tag als Urlaub, Krank, Feiertag oder Überstundenabbau markieren. Urlaubs- und Krankheitstage werden mit deiner täglichen Sollzeit gutgeschrieben. Gesetzliche Feiertage erkennt der Rechner automatisch und zieht sie vom Soll ab – bundesweite Feiertage immer, regionale wie Fronleichnam oder den Reformationstag, sobald du in den Einstellungen dein Bundesland wählst.</p>
-<h3>Überstundenkonto</h3>
-<p>Die Monatsansicht führt ein Überstundenkonto: Plus- und Minusstunden werden ab deinem ersten Eintrag fortlaufend von Monat zu Monat übertragen. Bringst du schon Überstunden mit, trägst du sie in den Einstellungen als Startsaldo ein.</p>
+<h3>Gleitzeitrechner: Überstundenkonto mit Plus- und Minusstunden</h3>
+<p>Die Monatsansicht führt ein Überstundenkonto und macht den Rechner zum Gleitzeitrechner: Plus- und Minusstunden werden ab deinem ersten Eintrag fortlaufend von Monat zu Monat übertragen. Du siehst jederzeit, wie dein Gleitzeitkonto steht und wie viele Stunden du abbauen kannst. Bringst du schon Überstunden mit, trägst du sie in den Einstellungen als Startsaldo ein.</p>
 <h3>Überstunden berechnen</h3>
-<p>Überstunden sind die Differenz zwischen geleisteter Arbeitszeit und deiner Sollzeit: <strong>Überstunden = Ist-Stunden − Soll-Stunden</strong>. Hast du in einer 40-Stunden-Woche 43:30 Stunden gearbeitet, sind das 3:30 Überstunden. Ein negatives Ergebnis bedeutet Minusstunden. Wochen- und Monatsansicht rechnen das automatisch für dich.</p>
+<p>Überstunden sind die Differenz zwischen geleisteter Arbeitszeit und deiner Sollzeit: <strong>Überstunden = Ist-Stunden − Soll-Stunden</strong>. Hast du in einer 40-Stunden-Woche 43:30 Stunden gearbeitet, sind das 3:30 Überstunden. Ein negatives Ergebnis bedeutet Minusstunden. Wochen- und Monatsansicht arbeiten als Überstundenrechner und rechnen das automatisch für dich.</p>
 </section>
 
 <section aria-labelledby="h-dezimal">
-<h2 id="h-dezimal">Dezimalzahl in Stunden und Minuten umrechnen</h2>
-<p>Viele Lohnabrechnungen und Zeiterfassungen zeigen Stunden als Dezimalzahl. 7,75 Stunden sind dabei nicht 7 Stunden und 75 Minuten, sondern 7 Stunden und 45 Minuten. So rechnest du um:</p>
+<h2 id="h-dezimal">Dezimalzahl in Stunden und Minuten umrechnen (Industrieminuten)</h2>
+<p>7,75 Stunden sind 7 Stunden und 45 Minuten – nicht 7 Stunden und 75 Minuten. Viele Lohnabrechnungen und Zeiterfassungen zeigen Stunden als Dezimalzahl. So rechnest du um:</p>
 <ul>
 <li><strong>Minuten in Dezimal:</strong> Minuten ÷ 60. Beispiel: 45 Minuten ÷ 60 = 0,75 Stunden.</li>
 <li><strong>Dezimal in Minuten:</strong> Nachkommastellen × 60. Beispiel: 0,8 Stunden × 60 = 48 Minuten.</li>
 </ul>
-<p>Dezimalstunden heißen auch Industriezeit: Eine Industrieminute ist eine Hundertstelstunde, also 36 Sekunden. Der Stundenrechner zeigt dezimal und in Stunden und Minuten immer beides an. Im Tab „Dezimal“ oben rechnest du beide Richtungen sofort um. Zum Nachschlagen hier die Tabelle für alle Minuten von 1 bis 60:</p>
+<h3>Industrieminuten und Industriestunden umrechnen</h3>
+<p>Dezimalstunden heißen auch Industriezeit. Eine Industriestunde hat 100 Industrieminuten statt 60 Minuten; eine Industrieminute ist also eine Hundertstelstunde und dauert 36 Sekunden. So rechnest du um: <strong>Industrieminuten = Minuten ÷ 60 × 100</strong> und zurück <strong>Minuten = Industrieminuten × 0,6</strong>. Beispiel: 45 Minuten sind 75 Industrieminuten, also 0,75 Stunden. Der Tab „Dezimal“ oben arbeitet als Industrieminuten-Rechner in beide Richtungen.</p>
+<p>Egal ob du ihn als Arbeitszeitrechner dezimal oder als Stundenrechner dezimal nutzt: Das Ergebnis erscheint immer in Stunden und Minuten und als Dezimalzahl. Zum Nachschlagen hier die Tabelle für alle Minuten von 1 bis 60:</p>
 <div class="table-wrap" id="dezimal-tabelle">
 <table class="dec-table">
-<caption>Dezimal-in-Minuten-Tabelle: 1 bis 60 Minuten</caption>
+<caption>Dezimal-in-Minuten-Tabelle: 1 bis 60 Minuten in Dezimalstunden (Industrieminuten = Nachkommastellen × 100)</caption>
 <thead><tr><th scope="col">Minuten</th><th scope="col">Dezimal</th><th scope="col">Minuten</th><th scope="col">Dezimal</th><th scope="col">Minuten</th><th scope="col">Dezimal</th></tr></thead>
 <tbody>{{DECIMAL_TABLE}}</tbody>
 </table>
@@ -437,12 +442,12 @@
 
 <section aria-labelledby="h-lohn">
 <h2 id="h-lohn">Stundenrechner mit Lohn</h2>
-<p>Trägst du in den Einstellungen deinen Stundenlohn ein, berechnet der Rechner deinen Bruttolohn für den Tag, die Woche und den Monat: <strong>Brutto = Arbeitsstunden (dezimal) × Stundenlohn</strong>. Bei 8 Stunden und 13,90 € pro Stunde sind das 111,20 € brutto.</p>
+<p>Dein Bruttolohn ist die Zahl deiner Arbeitsstunden mal dein Stundenlohn: <strong>Brutto = Arbeitsstunden (dezimal) × Stundenlohn</strong>. Bei 8 Stunden und 13,90 € pro Stunde sind das 111,20 € brutto. Trägst du in den Einstellungen deinen Stundenlohn ein, zeigt der Stundenrechner mit Lohn dieses Brutto für den Tag, die Woche und den Monat – so rechnest du Arbeitszeit und Lohn in einem Schritt ab.</p>
 <p>Der gesetzliche Mindestlohn beträgt seit 1. Januar 2026 <strong>13,90 € pro Stunde</strong> und steigt zum 1. Januar 2027 auf <strong>14,60 €</strong>. Liegt dein eingegebener Stundenlohn darunter, zeigt der Rechner einen Hinweis. Für Minijobs gilt 2026 eine Verdienstgrenze von 603 € im Monat (ab 2027: 633 €). Aktivierst du in den Einstellungen den Minijob-Check, warnt die Monatsansicht, sobald dein Brutto darüber liegt, und zeigt, wie viel bis zur Grenze noch bleibt.</p>
 <h3>Zuschläge für Nacht, Sonntag und Feiertag</h3>
 <p>Auf Wunsch rechnet der Rechner Zuschläge mit: Aktiviere sie in den Einstellungen und trage deine Prozentsätze ein. Vorbelegt sind die steuerfreien Höchstsätze nach § 3b EStG: 25 % für Nachtarbeit von 20 bis 6 Uhr (40 % von 0 bis 4 Uhr, wenn die Schicht vor Mitternacht begann), 50 % für Sonntagsarbeit, 125 % an gesetzlichen Feiertagen und 150 % an den Weihnachtsfeiertagen und am 1. Mai. Ob und in welcher Höhe dir Zuschläge zustehen, regeln Arbeitsvertrag oder Tarifvertrag. Achtung: Die Nachtzeit für Zuschläge (20–6 Uhr) ist eine andere als die Nachtzeit im Arbeitszeitgesetz (23–6 Uhr).</p>
-<h3>Gehalts-Stundenrechner: Stundenlohn aus dem Monatsgehalt</h3>
-<p>Du bekommst ein festes Monatsgehalt und willst deinen Stundenlohn wissen? Die übliche Formel lautet: <strong>Stundenlohn = Monatsgehalt × 3 ÷ 13 ÷ Wochenstunden</strong>. Sie rechnet mit 13 Wochen pro Quartal. Beispiel: 3.000 € bei 40 Wochenstunden ergeben 3.000 × 3 ÷ 13 ÷ 40 = 17,31 € pro Stunde. Im Tab „Lohn“ rechnest du beide Richtungen und übernimmst das Ergebnis mit einem Tipp als deinen Stundenlohn.</p>
+<h3>Stundenlohn aus dem Monatsgehalt</h3>
+<p>Du bekommst ein festes Monatsgehalt und willst es in einen Stundenlohn umrechnen? Im Tab „Lohn“ rechnest du beide Richtungen und übernimmst das Ergebnis mit einem Tipp als deinen Stundenlohn. Formel, Tabelle und Minijob-Check findest du im <a href="/stundenlohnrechner">Stundenlohnrechner</a>.</p>
 </section>
 
 <section aria-labelledby="h-excel">
@@ -489,7 +494,7 @@
 <footer class="foot">
   <div class="wrap foot-in">
     <p>© {{YEAR}} derarbeitszeitrechner.de – kostenloser Arbeitszeitrechner und Stundenrechner</p>
-    <nav aria-label="Rechtliches"><a href="/impressum">Impressum</a> <a href="/datenschutz">Datenschutz</a> <a href="/kontakt">Kontakt</a></nav>
+    {{FOOT_NAV}}
   </div>
 </footer>
 <div id="print-area" class="print-only" aria-hidden="true"></div>

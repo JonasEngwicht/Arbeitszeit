@@ -318,3 +318,23 @@ body{background:linear-gradient(180deg,var(--accent-soft) 0,var(--bg) 340px) no-
 .note-act{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;justify-content:space-between}
 .btn-fix{appearance:none;font:700 14.5px var(--font);background:var(--warn-text);color:var(--warn-bg);border:0;border-radius:9px;padding:8px 14px;min-height:40px;cursor:pointer}
 .btn-fix:hover{filter:brightness(1.15)}
+
+/* Mehrere Rechner-Seiten */
+.topnav .wide{display:none}
+@media (min-width:700px){.topnav .wide{display:inline}}
+.more-tools{font-size:14.5px;margin:10px 2px 0;color:var(--muted)}
+.more-tools a{font-weight:600}
+.foot nav{flex-wrap:wrap}
+.calc .panel+.panel{border-top:1px solid var(--line);margin-top:8px}
+.calc .panel .h-small{font-size:16px;margin:2px 0 10px}
+.row-date .check{min-height:40px;align-items:center;margin-left:auto}
+.row-date .check input{margin:0}
+.num-table td,.num-table th{white-space:nowrap}
+.num-table td:first-child{font-weight:600}
+.topnav .nav-l{display:none}
+@media (min-width:700px){.topnav .nav-l{display:inline}.topnav .nav-s{display:none}}
+.money .res-main{display:block;position:relative}
+.money .res-label{min-height:40px;padding-right:104px;display:flex;align-items:center}
+.money .copy{position:absolute;top:0;right:0}
+.money .res-big{white-space:nowrap;font-size:38px}
+@media (min-width:700px){.money .res-big{font-size:44px}}

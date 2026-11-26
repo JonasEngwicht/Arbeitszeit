@@ -33,8 +33,12 @@ export const FAQ = [
     a: 'Ziehe deine Sollzeit von der tatsächlich geleisteten Arbeitszeit ab. Bei 40 Stunden Soll und 43:30 Stunden Ist hast du 3:30 Überstunden gemacht. Trage im Rechner deine Wochenstunden ein – Wochen- und Monatsansicht zeigen Plus und Minus pro Tag und den Saldo automatisch.',
   },
   {
-    q: 'Wie berechne ich meinen Stundenlohn aus dem Monatsgehalt?',
-    a: 'Mit der Formel Monatsgehalt × 3 ÷ 13 ÷ Wochenstunden. Bei 3.000 € brutto und 40 Stunden pro Woche sind das 17,31 € pro Stunde. Der Gehalts-Stundenrechner im Tab „Lohn“ rechnet beide Richtungen und zeigt, ob der Stundenlohn über dem Mindestlohn liegt.',
+    q: 'Wie rechne ich Minuten in Industrieminuten um?',
+    a: 'Teile die Minuten durch 60 und nimm das Ergebnis mal 100. 15 Minuten sind 25 Industrieminuten, 30 Minuten 50 und 45 Minuten 75 Industrieminuten. Umgekehrt gilt: Industrieminuten × 0,6 = Minuten. Eine Industrieminute ist eine Hundertstelstunde und dauert 36 Sekunden. Der Tab „Dezimal“ rechnet beide Richtungen.',
+  },
+  {
+    q: 'Wie berechne ich meinen Lohn aus den Arbeitsstunden?',
+    a: 'Multipliziere deine Arbeitsstunden als Dezimalzahl mit deinem Stundenlohn. Bei 7:45 Stunden (7,75 h) und 15,00 € pro Stunde sind das 116,25 € brutto. Trägst du in den Einstellungen deinen Stundenlohn ein, zeigt der Rechner das Brutto für Tag, Woche und Monat. Was dein Monatsgehalt pro Stunde wert ist, zeigt der Stundenlohnrechner.',
   },
   {
     q: 'Kann ich den Rechner als App und offline nutzen?',

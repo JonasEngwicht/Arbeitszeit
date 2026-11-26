@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}}</title>
+<meta name="description" content="{{DESCRIPTION}}">
+<link rel="canonical" href="{{URL}}/stundenlohnrechner">
+{{HEAD_COMMON}}
+<meta property="og:type" content="website">
+<meta property="og:locale" content="de_DE">
+<meta property="og:site_name" content="derarbeitszeitrechner.de">
+<meta property="og:title" content="{{TITLE}}">
+<meta property="og:description" content="{{DESCRIPTION}}">
+<meta property="og:url" content="{{URL}}/stundenlohnrechner">
+<meta property="og:image" content="{{URL}}/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="modulepreload" href="{{ASSETS}}/core.js">
+<link rel="modulepreload" href="{{ASSETS}}/config.js">
+<style>{{CSS}}</style>
+<script type="application/ld+json">{{JSONLD}}</script>
+</head>
+<body>
+<a class="skip" href="#rechner">Zum Rechner springen</a>
+{{HEADER}}
+
+<main id="main">
+<section class="hero" id="rechner" aria-labelledby="h1">
+  <div class="wrap">
+    <h1 id="h1">Stundenlohnrechner</h1>
+    <p class="sub">Gehalt in Stundenlohn umrechnen und Monatslohn aus dem Stundenlohn berechnen – kostenlos und ohne Anmeldung</p>
+
+    <div class="card calc money">
+      <div class="panel" id="salary">
+        <h2 class="h-small">Gehalt in Stundenlohn umrechnen</h2>
+        <div class="times">
+          <div class="field">
+            <label for="s-amount">Gehalt brutto (€)</label>
+            <input id="s-amount" class="in in-time" type="text" inputmode="decimal" autocomplete="off" value="{{EX_SALARY_RAW}}">
+          </div>
+          <div class="field">
+            <label for="s-hours">Wochenstunden</label>
+            <input id="s-hours" class="in in-time" type="text" inputmode="decimal" autocomplete="off" value="{{EX_HOURS}}">
+          </div>
+        </div>
+        <div class="row-date">
+          <label class="lbl-inline" for="s-period">Gehalt gilt</label>
+          <select id="s-period" class="in in-date"><option value="month" selected>pro Monat</option><option value="year">pro Jahr</option></select>
+          <label class="check"><input type="checkbox" id="s-minijob"> Minijob prüfen</label>
+        </div>
+        <div class="result" aria-live="polite">
+          <div class="res-main">
+            <div>
+              <div class="res-label">Stundenlohn brutto</div>
+              <div class="res-big"><span id="s-rate">{{EX_RATE}}</span></div>
+              <div class="res-dec" id="s-detail">{{EX_SALARY}} × 3 ÷ 13 ÷ {{EX_HOURS}} Stunden</div>
+            </div>
+            <button type="button" class="btn-ghost copy" id="s-copy" aria-label="Stundenlohn kopieren">Kopieren</button>
+          </div>
+          <dl class="res-facts">
+            <div><dt>Monatsgehalt</dt><dd id="s-month">{{EX_SALARY}}</dd></div>
+            <div><dt>Jahresgehalt</dt><dd id="s-year">{{EX_YEAR}}</dd></div>
+            <div><dt>Stunden pro Monat</dt><dd id="s-mh">{{EX_MONTH_HOURS}} h</dd></div>
+          </dl>
+          <ul class="notes" id="s-notes"><li class="note ok">Über dem gesetzlichen Mindestlohn von {{MINWAGE}} pro Stunde.</li></ul>
+        </div>
+      </div>
+
+      <div class="panel" id="wage">
+        <h2 class="h-small">Stundenlohn in Monatslohn umrechnen</h2>
+        <div class="times">
+          <div class="field">
+            <label for="w-rate">Stundenlohn brutto (€)</label>
+            <input id="w-rate" class="in in-time" type="text" inputmode="decimal" autocomplete="off" value="{{MINWAGE_RAW}}">
+          </div>
+          <div class="field">
+            <label for="w-hours">Wochenstunden</label>
+            <input id="w-hours" class="in in-time" type="text" inputmode="decimal" autocomplete="off" value="40">
+          </div>
+        </div>
+        <div class="result" aria-live="polite">
+          <div class="res-main">
+            <div>
+              <div class="res-label">Monatslohn brutto</div>
+              <div class="res-big"><span id="w-month">{{MINWAGE_MONTH}}</span></div>
+              <div class="res-dec" id="w-detail">{{MINWAGE}} × 40 Stunden × 13 ÷ 3</div>
+            </div>
+            <button type="button" class="btn-ghost copy" id="w-copy" aria-label="Monatslohn kopieren">Kopieren</button>
+          </div>
+          <dl class="res-facts">
+            <div><dt>Jahreslohn</dt><dd id="w-year">{{MINWAGE_YEAR}}</dd></div>
+            <div><dt>Stunden pro Monat</dt><dd id="w-mh">{{EX_MONTH_HOURS}} h</dd></div>
+          </dl>
+          <ul class="notes" id="w-notes"><li class="note ok">Über dem gesetzlichen Mindestlohn von {{MINWAGE}} pro Stunde.</li></ul>
+        </div>
+      </div>
+
+      <p class="privacy"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5Zm-3 8V7a3 3 0 1 1 6 0v3H9Z"/></svg> Deine Eingaben bleiben auf deinem Gerät. Nichts wird übertragen oder gespeichert.</p>
+    </div>
+    <ul class="trust" aria-label="Vorteile"><li>Kostenlos</li><li>Ohne Anmeldung</li><li>Mit Mindestlohn-Check</li><li>Brutto, vor Steuern und Abgaben</li></ul>
+    <p class="disclaimer">Ergebnis ohne Gewähr, keine Rechts- oder Steuerberatung. Arbeits- und Tarifverträge können abweichend rechnen.</p>
+    {{MORE_TOOLS}}
+  </div>
+</section>
+
+<div class="wrap content" id="ratgeber">
+<article>
+<section aria-labelledby="h-formel">
+<h2 id="h-formel">Stundenlohn berechnen: die Formel</h2>
+<p>Deinen Stundenlohn berechnest du, indem du dein Monatsgehalt mit 3 multiplizierst und durch 13 und durch deine Wochenstunden teilst:</p>
+<p class="formula"><strong>Stundenlohn = Monatsgehalt × 3 ÷ 13 ÷ Wochenstunden</strong></p>
+<p>Die Formel rechnet mit einem Quartal: 3 Monate haben 13 Wochen. Das entspricht dem bekannten Faktor von rund 4,33 Wochen pro Monat. Beispiel: {{EX_SALARY_E}} brutto bei {{EX_HOURS}} Wochenstunden ergeben {{EX_SALARY_SHORT}} × 3 ÷ 13 ÷ {{EX_HOURS}} = <strong>{{EX_RATE}} pro Stunde</strong>.</p>
+<p>Der Stundenlohnrechner {{YEAR}} oben erledigt die Rechnung live beim Tippen. Du gibst dein Bruttogehalt pro Monat oder pro Jahr und deine Wochenstunden ein und siehst sofort Stundenlohn, Jahresgehalt und die durchschnittlichen Arbeitsstunden im Monat. Als Wochenstunden zählt die vertragliche Arbeitszeit, nicht die tatsächlich geleistete.</p>
+</section>
+
+<section aria-labelledby="h-gehalt">
+<h2 id="h-gehalt">Gehalt in Stundenlohn umrechnen</h2>
+<p>Bei gleichem Gehalt steigt der Stundenlohn, je weniger Wochenstunden im Vertrag stehen. Die Tabelle zeigt, welchem Bruttostundenlohn ein Monatsgehalt bei 40, 35, 30 und 20 Wochenstunden entspricht:</p>
+<div class="table-wrap">
+<table class="num-table">
+<caption>Monatsgehalt brutto in Stundenlohn umrechnen – Tabelle</caption>
+<thead><tr><th scope="col">Monatsgehalt</th><th scope="col">40 h/Woche</th><th scope="col">35 h/Woche</th><th scope="col">30 h/Woche</th><th scope="col">20 h/Woche</th></tr></thead>
+<tbody>{{SALARY_TABLE}}</tbody>
+</table>
+</div>
+<p>Hast du ein Jahresgehalt vereinbart, stellst du den Rechner auf „pro Jahr“. Er teilt den Betrag durch 12 und rechnet dann wie beim Monatsgehalt. {{EX_YEAR_E}} im Jahr sind also ebenfalls {{EX_RATE}} pro Stunde.</p>
+</section>
+
+<section aria-labelledby="h-monatslohn">
+<h2 id="h-monatslohn">Monatslohn aus dem Stundenlohn berechnen</h2>
+<p>Deinen Monatslohn berechnest du aus dem Stundenlohn, indem du ihn mit den Wochenstunden und mit 13 multiplizierst und durch 3 teilst:</p>
+<p class="formula"><strong>Monatslohn = Stundenlohn × Wochenstunden × 13 ÷ 3</strong></p>
+<p>Beispiel: {{MINWAGE}} pro Stunde bei 40 Wochenstunden ergeben {{MINWAGE}} × 40 × 13 ÷ 3 = <strong>{{MINWAGE_MONTH}} brutto im Monat</strong>. So rechnest du den Bruttolohn aus dem Stundenlohn als gleichbleibenden Durchschnitt aus.</p>
+<p>Wirst du nach tatsächlich geleisteten Stunden bezahlt, schwankt dein Lohn von Monat zu Monat mit der Zahl der Arbeitstage. Dann rechnest du genauer mit dem <a href="/">Arbeitszeitrechner</a>: Er zählt deine Stunden pro Tag, Woche und Monat und multipliziert sie mit deinem Stundenlohn (<a href="/#h-lohn">Stundenrechner mit Lohn</a>).</p>
+</section>
+
+<section aria-labelledby="h-brutto">
+<h2 id="h-brutto">Brutto oder netto?</h2>
+<p>Dieser Rechner zeigt den Bruttostundenlohn, also den Betrag vor Steuern und Sozialabgaben. Auch der gesetzliche Mindestlohn und die Stundenlöhne in Arbeits- und Tarifverträgen sind Bruttowerte – deshalb vergleichst du mit dem Bruttostundenlohn richtig.</p>
+<p>Wie viel davon netto bleibt, hängt von deiner Steuerklasse, Kinderfreibeträgen, Kirchensteuer, deinem Bundesland und dem Zusatzbeitrag deiner Krankenkasse ab. Vom Brutto gehen Lohnsteuer, gegebenenfalls Solidaritätszuschlag und Kirchensteuer sowie die Beiträge zur Kranken-, Pflege-, Renten- und Arbeitslosenversicherung ab. Eine Faustformel für alle gibt es nicht; verlässlich ist nur deine Lohnabrechnung.</p>
+</section>
+
+<section aria-labelledby="h-mindestlohn">
+<h2 id="h-mindestlohn">Mindestlohn und Minijob</h2>
+<p>{{MINWAGE_SENTENCE}} Liegt dein berechneter Stundenlohn darunter, zeigt der Rechner eine Warnung. Achte bei einem festen Monatsgehalt darauf, dass du auch mit Überstunden nicht unter den Mindestlohn rutschst: Maßgeblich sind die tatsächlich geleisteten Stunden.</p>
+<p>Im Minijob ist nicht die Stundenzahl begrenzt, sondern der Verdienst: {{MINIJOB_SENTENCE}} Mit dem Mindestlohn sind das höchstens {{MINIJOB_HOURS}} Stunden im Monat, also rund {{MINIJOB_HOURS_WEEK}} Stunden pro Woche. Setzt du im Rechner den Haken bei „Minijob prüfen“, zeigt er dir, ob dein Monatslohn unter der Grenze bleibt und wie viele Stunden bei deinem Stundenlohn höchstens möglich sind.</p>
+</section>
+
+<section aria-labelledby="h-teilzeit">
+<h2 id="h-teilzeit">Stundenlohn in Teilzeit</h2>
+<p>In Teilzeit gilt dieselbe Formel, du setzt nur deine vereinbarten Wochenstunden ein. {{PT_SALARY}} brutto bei {{PT_HOURS}} Wochenstunden sind {{PT_RATE}} pro Stunde. Reduzierst du deine Stunden, bleibt der Stundenlohn gleich und das Monatsgehalt sinkt im selben Verhältnis: Aus {{EX_SALARY_E}} bei {{EX_HOURS}} Stunden werden bei {{PT2_HOURS}} Stunden {{PT2_SALARY}}.</p>
+</section>
+
+<section aria-labelledby="h-faq" id="faq">
+<h2 id="h-faq">Häufige Fragen</h2>
+{{FAQ_HTML}}
+</section>
+
+<section aria-labelledby="h-recht" class="legal-note">
+<h2 id="h-recht">Rechtshinweis und Quellen</h2>
+<p>Alle Angaben ohne Gewähr und keine Rechts- oder Steuerberatung. Arbeitsverträge, Tarifverträge und Betriebsvereinbarungen können den Stundenlohn anders ermitteln, zum Beispiel mit dem Faktor 4,35 oder nach den Arbeitstagen des jeweiligen Monats.</p>
+<ul class="sources">
+<li><a href="https://www.bundesregierung.de/breg-de/service/fragen-und-anworten/mindestlohn-faq-1688186" rel="noopener">Bundesregierung: Mindestlohn und Minijob-Grenze</a></li>
+<li><a href="https://www.gesetze-im-internet.de/milog/" rel="noopener">Mindestlohngesetz (MiLoG)</a></li>
+</ul>
+<p class="stand">Stand: {{STAND}}</p>
+</section>
+</article>
+</div>
+</main>
+
+{{FOOTER}}
+<script type="module" src="{{ASSETS}}/lohn.js"></script>
+</body>
+</html>
