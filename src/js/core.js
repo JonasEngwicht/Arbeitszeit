@@ -541,6 +541,49 @@ export function hourlyToSalary(hourlyEuro, weeklyHours) {
   if (!(hourlyEuro > 0) || !(weeklyHours > 0)) return null;
   return Math.round(((hourlyEuro * weeklyHours * 13) / 3) * 100) / 100;
 }
+const round2 = (v) => Math.round(v * 100) / 100;
+// Höchste Stundenzahl pro Monat, mit der ein Stundenlohn unter der Minijob-Grenze bleibt (abgerundet auf 0,1 h)
+export function minijobMaxHours(hourlyEuro, iso) {
+  if (!(hourlyEuro > 0)) return null;
+  return Math.floor((minijobAt(iso) / hourlyEuro) * 10 + 1e-9) / 10;
+}
+// Stundenlohnrechner: Gehalt (pro Monat oder Jahr) → Stundenlohn mit Mindestlohn- und Minijob-Prüfung
+export function salaryInfo({ amount, period = 'month', weeklyHours, iso } = {}) {
+  if (!(amount > 0) || !(weeklyHours > 0)) return null;
+  const monthly = round2(period === 'year' ? amount / 12 : amount);
+  const rate = salaryToHourly(monthly, weeklyHours);
+  if (rate === null) return null;
+  const minWage = minWageAt(iso);
+  const minijobLimit = minijobAt(iso);
+  return {
+    monthly,
+    yearly: round2(period === 'year' ? amount : amount * 12),
+    rate,
+    monthlyHours: round2((weeklyHours * 13) / 3),
+    minWage,
+    belowMinWage: rate < minWage,
+    minijobLimit,
+    overMinijob: monthly > minijobLimit,
+    minijobMaxHours: minijobMaxHours(rate, iso),
+  };
+}
+// Stundenlohn → Monats- und Jahreslohn
+export function wageInfo({ rate, weeklyHours, iso } = {}) {
+  const monthly = hourlyToSalary(rate, weeklyHours);
+  if (monthly === null) return null;
+  const minWage = minWageAt(iso);
+  const minijobLimit = minijobAt(iso);
+  return {
+    monthly,
+    yearly: round2(monthly * 12),
+    monthlyHours: round2((weeklyHours * 13) / 3),
+    minWage,
+    belowMinWage: rate < minWage,
+    minijobLimit,
+    overMinijob: monthly > minijobLimit,
+    minijobMaxHours: minijobMaxHours(rate, iso),
+  };
+}
 
 /* ---------- Teilen-Link ---------- */
 

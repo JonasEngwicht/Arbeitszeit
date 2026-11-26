@@ -166,7 +166,7 @@ test('Monat: echter Kalender (November 2026 = 21 Werktage Mo–Fr)', () => {
 /* ---------- Phase 2 ---------- */
 import {
   holidays, holidayName, easterSunday, calcSurcharges, dayInfo, accountBalance,
-  salaryToHourly, hourlyToSalary, encodeShare, decodeShare,
+  salaryToHourly, hourlyToSalary, encodeShare, decodeShare, salaryInfo, wageInfo, minijobMaxHours,
 } from '../src/js/core.js';
 
 test('Feiertage: Ostern 2026/2027, Bundesländer', () => {
@@ -231,6 +231,43 @@ test('Gehalt ↔ Stundenlohn', () => {
   assert.equal(salaryToHourly(3000, 40), 17.31);
   assert.equal(hourlyToSalary(15, 40), 2600);
   assert.equal(salaryToHourly(0, 40), null);
+});
+
+test('Stundenlohnrechner: Testfälle aus dem SEO-Plan (Teil B, Stufe 1)', () => {
+  const d = '2026-11-26';
+  // 1: 3.000 € Monatsgehalt, 40 h/Woche → 17,31 €/h
+  const a = salaryInfo({ amount: 3000, weeklyHours: 40, iso: d });
+  assert.equal(a.rate, 17.31);
+  assert.equal(a.yearly, 36000);
+  assert.equal(a.monthlyHours, 173.33);
+  assert.equal(a.belowMinWage, false);
+  // 2: 13,90 €/h, 40 h/Woche → 2.409,33 €/Monat
+  const w = wageInfo({ rate: 13.9, weeklyHours: 40, iso: d });
+  assert.equal(w.monthly, 2409.33);
+  assert.equal(w.belowMinWage, false);
+  // 3: 2.000 € bei 40 h → 11,54 €/h, unter Mindestlohn
+  const c = salaryInfo({ amount: 2000, weeklyHours: 40, iso: d });
+  assert.equal(c.rate, 11.54);
+  assert.equal(c.belowMinWage, true);
+  // 4: 36.000 € Jahresgehalt = Fall 1
+  const y = salaryInfo({ amount: 36000, period: 'year', weeklyHours: 40, iso: d });
+  assert.equal(y.rate, 17.31);
+  assert.equal(y.monthly, 3000);
+  // 5: Minijob-Grenze 603 € (2026): genau auf der Grenze ist erlaubt, 604 € liegt darüber
+  assert.equal(salaryInfo({ amount: 603, weeklyHours: 10, iso: d }).overMinijob, false);
+  assert.equal(salaryInfo({ amount: 604, weeklyHours: 10, iso: d }).overMinijob, true);
+  assert.equal(minijobMaxHours(13.9, d), 43.3);
+  // 6: Stichtag 1.1.2027 → Mindestlohn 14,60 €, Minijob-Grenze 633 €
+  const n = salaryInfo({ amount: 2500, weeklyHours: 40, iso: '2027-01-01' });
+  assert.equal(n.minWage, 14.6);
+  assert.equal(n.minijobLimit, 633);
+  assert.equal(n.belowMinWage, true); // 14,42 € < 14,60 €
+  assert.equal(salaryInfo({ amount: 2500, weeklyHours: 40, iso: '2026-12-31' }).belowMinWage, false);
+  // 7: leere oder unsinnige Eingaben → kein Ergebnis, keine Division durch null
+  assert.equal(salaryInfo({ amount: 3000, weeklyHours: 0, iso: d }), null);
+  assert.equal(salaryInfo({ amount: null, weeklyHours: 40, iso: d }), null);
+  assert.equal(wageInfo({ rate: 15, weeklyHours: null, iso: d }), null);
+  assert.equal(minijobMaxHours(0, d), null);
 });
 
 test('Teilen-Link: hin und zurück, kaputte Daten → null', () => {

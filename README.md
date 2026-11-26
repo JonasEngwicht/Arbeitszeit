@@ -1,6 +1,6 @@
 # derarbeitszeitrechner.de
 
-Kostenloser Arbeitszeit- und Stundenrechner als One-Pager. Läuft komplett im Browser
+Kostenloser Arbeitszeit- und Stundenrechner mit der Unterseite Stundenlohnrechner. Läuft komplett im Browser
 (keine Server-Datenbank, kein Konto), ausgeliefert über einen Cloudflare Worker mit Static Assets.
 
 ## Aufbau
@@ -13,10 +13,11 @@ Kostenloser Arbeitszeit- und Stundenrechner als One-Pager. Läuft komplett im Br
 | `src/js/store.js` | Speicher im Browser (IndexedDB, Fallback localStorage), JSON-Backup |
 | `src/js/export.js` | CSV, Excel (.xlsx) und PDF – wird erst beim Export geladen |
 | `src/index.html`, `src/styles.css`, `src/faq.mjs` | Seite, Design, FAQ (auch als strukturierte Daten) |
+| `src/stundenlohnrechner.html`, `src/js/lohn.js`, `src/faq-stundenlohn.mjs` | Unterseite `/stundenlohnrechner`: Vorlage, Oberfläche, FAQ. Alle Euro-Beträge im Text setzt der Build aus dem Rechenkern ein |
 | `src/site.json` | Betreiberdaten für Impressum/Datenschutz, „Stand“-Datum |
-| `scripts/build.mjs` | Build ohne Abhängigkeiten → `public/` (vorgerendert, CSS inline, Assets mit Hash) |
+| `scripts/build.mjs` | Build ohne Abhängigkeiten → `public/` (vorgerendert, CSS inline, Assets mit Hash). Kopf, Fußzeile und Rechner-Navigation aller Seiten kommen aus der Liste `TOOLS` |
 | `worker/index.js` | Weiterleitungen (www, derstundenrechner.de → 301), Sicherheits- und Cache-Header |
-| `test/core.test.js` | Die 12 Abnahme-Testfälle plus Randfälle |
+| `test/core.test.js` | Die 12 Abnahme-Testfälle plus Randfälle, dazu die Testfälle des Stundenlohnrechners |
 
 ## Entwickeln
 

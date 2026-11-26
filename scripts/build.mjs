@@ -4,8 +4,13 @@ import { readFileSync, writeFileSync, mkdirSync, rmSync, readdirSync, copyFileSy
 import { createHash } from 'node:crypto';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { calcDay, formatHM, formatDecimal, weeklyToMonthly, toIso } from '../src/js/core.js';
+import {
+  calcDay, formatHM, formatDecimal, formatEuro, weeklyToMonthly, toIso, parseIso, MONTHS,
+  salaryToHourly, salaryInfo, wageInfo, minijobMaxHours,
+} from '../src/js/core.js';
+import { LAW } from '../src/js/config.js';
 import { FAQ } from '../src/faq.mjs';
+import { faqStundenlohn } from '../src/faq-stundenlohn.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const src = (p) => join(root, 'src', p);
@@ -55,7 +60,55 @@ for (const h of [10, 12, 15, 19.5, 20, 25, 30, 35, 37, 37.5, 38, 38.5, 39, 40, 4
 }
 
 /* ---------- FAQ ---------- */
-const faqHtml = `<div class="faq">${FAQ.map((f, i) => `<details${i === 0 ? ' open' : ''}><summary><h3>${esc(f.q)}</h3></summary><p>${esc(f.a)}</p></details>`).join('')}</div>`;
+const renderFaq = (list) => `<div class="faq">${list.map((f, i) => `<details${i === 0 ? ' open' : ''}><summary><h3>${esc(f.q)}</h3></summary><p>${esc(f.a)}</p></details>`).join('')}</div>`;
+const faqEntity = (list) => list.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } }));
+const jsonldString = (obj) => JSON.stringify(obj).replace(/</g, '\\u003c');
+const faqHtml = renderFaq(FAQ);
+
+/* ---------- Gemeinsame Bausteine aller Seiten ---------- */
+const year = new Date().getFullYear();
+const today = toIso(new Date());
+// Rechner-Seiten: Reihenfolge = Reihenfolge in Navigation und Fußzeile
+const TOOLS = [
+  { path: '/', label: 'Arbeitszeitrechner', short: 'Arbeitszeit' },
+  { path: '/stundenlohnrechner', label: 'Stundenlohnrechner', short: 'Stundenlohn' },
+];
+const otherTools = (current) => TOOLS.filter((t) => t.path !== current);
+const brandSvg = '<svg aria-hidden="true" width="26" height="26" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="currentColor"/><circle cx="16" cy="16" r="9" fill="none" stroke="#fff" stroke-width="2.5"/><path d="M16 10.5V16l3.5 2.5" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/></svg>';
+const headCommon = `<meta name="theme-color" content="#0b5cad" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1720" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="/favicon.ico?v=2" sizes="32x32">
+<link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2">
+<link rel="manifest" href="/site.webmanifest">`;
+const header = (current) => `<header class="top">
+  <div class="wrap top-in">
+    <a class="brand" href="/" aria-label="derarbeitszeitrechner.de – Startseite">${brandSvg}<span>derarbeitszeitrechner<span class="tld">.de</span></span></a>
+    <nav class="topnav" aria-label="Rechner">${otherTools(current).map((t, i) => `<a${i ? ' class="wide"' : ''} href="${t.path}" aria-label="${t.label}"><span class="nav-l">${t.label}</span><span class="nav-s" aria-hidden="true">${t.short}</span></a>`).join('')}</nav>
+  </div>
+</header>`;
+const navToolsWide = (current) => otherTools(current).map((t) => `<a class="wide" href="${t.path}">${t.label}</a>`).join('\n      ');
+const footNav = `<nav aria-label="Rechner">${TOOLS.map((t) => `<a href="${t.path}">${t.label}</a>`).join(' ')}</nav>
+    <nav aria-label="Rechtliches"><a href="/impressum">Impressum</a> <a href="/datenschutz">Datenschutz</a> <a href="/kontakt">Kontakt</a></nav>`;
+const footer = (tagline) => `<footer class="foot">
+  <div class="wrap foot-in">
+    <p>© ${year} derarbeitszeitrechner.de${tagline ? ` – ${tagline}` : ''}</p>
+    ${footNav}
+  </div>
+</footer>`;
+const moreTools = (current) => `<p class="more-tools">Weitere Rechner: ${otherTools(current).map((t) => `<a href="${t.path}">${t.label}</a>`).join(' · ')}</p>`;
+
+/* ---------- Rechtswerte als Text (aus config.js, damit nichts von Hand gepflegt wird) ---------- */
+const euro = (v) => formatEuro(Math.round(v * 100));
+const dateDe = (iso) => { const d = parseIso(iso); return `${d.getDate()}. ${MONTHS[d.getMonth()]} ${d.getFullYear()}`; };
+const currentAndNext = (list) => {
+  let cur = list[0];
+  for (const item of list) if (item.from <= today) cur = item;
+  return { cur, next: list.find((item) => item.from > today) || null };
+};
+const minWage = currentAndNext(LAW.minWage);
+const minijob = currentAndNext(LAW.minijobLimit);
 
 const jsonld = {
   '@context': 'https://schema.org',
@@ -63,25 +116,24 @@ const jsonld = {
     {
       '@type': 'WebApplication',
       '@id': `${site.url}/#app`,
-      name: 'Arbeitszeitrechner & Stundenrechner',
+      name: 'Arbeitszeitrechner & Stundenrechner online',
       url: `${site.url}/`,
-      description: 'Arbeitszeit und Stunden berechnen: mit Pausen, Nachtschicht, Woche und Monat, Dezimal-Umrechnung, Lohn und Prüfung nach Arbeitszeitgesetz. Kostenlos und ohne Anmeldung.',
+      description: 'Arbeitszeit und Arbeitsstunden online berechnen: mit Pausen, Nachtschicht, Woche und Monat, Industrieminuten, Lohn und Prüfung nach Arbeitszeitgesetz. Kostenlos und ohne Anmeldung.',
       applicationCategory: 'UtilitiesApplication',
       operatingSystem: 'Alle (Webbrowser)',
       inLanguage: 'de-DE',
       isAccessibleForFree: true,
       offers: { '@type': 'Offer', price: '0', priceCurrency: 'EUR' },
-      featureList: 'Arbeitszeit mit mehreren Pausen, Nachtschicht, Pflichtpausen-Prüfung, Wochen- und Monatsansicht, Feierabendrechner, Stunden addieren, Dezimal-Umrechner, Stundenlohn, Export als Excel, CSV und PDF',
+      featureList: 'Arbeitszeit mit mehreren Pausen, Nachtschicht, Pflichtpausen-Prüfung, Wochen- und Monatsansicht, Gleitzeit- und Überstundenkonto, Feierabendrechner, Stunden addieren, Dezimal- und Industrieminuten-Rechner, Stundenlohn, Export als Excel, CSV und PDF',
     },
     {
       '@type': 'FAQPage',
       '@id': `${site.url}/#faq`,
-      mainEntity: FAQ.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })),
+      mainEntity: faqEntity(FAQ),
     },
   ],
 };
 
-const year = new Date().getFullYear();
 const fill = (tpl, map) => tpl.replace(/\{\{(\w+)\}\}/g, (_, k) => {
   if (!(k in map)) throw new Error(`Platzhalter {{${k}}} nicht befüllt`);
   return map[k];
@@ -91,8 +143,8 @@ const index = fill(readFileSync(src('index.html'), 'utf8'), {
   URL: site.url,
   ASSETS: assetsPath,
   CSS: css,
-  JSONLD: JSON.stringify(jsonld).replace(/</g, '\\u003c'),
-  TODAY: toIso(new Date()),
+  JSONLD: jsonldString(jsonld),
+  TODAY: today,
   PRE_HM: formatHM(pre.net),
   PRE_DEC: formatDecimal(pre.net),
   PRE_GROSS: formatHM(pre.gross),
@@ -102,8 +154,97 @@ const index = fill(readFileSync(src('index.html'), 'utf8'), {
   FAQ_HTML: faqHtml,
   STAND: site.stand,
   YEAR: String(year),
+  NAV_TOOLS: navToolsWide('/'),
+  MORE_TOOLS: moreTools('/'),
+  FOOT_NAV: footNav,
 });
 writeFileSync(join(out, 'index.html'), index);
+
+/* ---------- Stundenlohnrechner ---------- */
+const ex = salaryInfo({ amount: 3000, weeklyHours: 40, iso: today });
+const mw = wageInfo({ rate: minWage.cur.value, weeklyHours: 40, iso: today });
+const euroShort = (v) => euro(v).replace(/,00 €$/, ' €');
+const dec1 = (v) => v.toFixed(1).replace('.', ',');
+const mjHours = minijobMaxHours(minWage.cur.value, today);
+const lohnValues = {
+  exSalary: euroShort(ex.monthly), exHours: '40', exRate: euro(ex.rate),
+  exRate35: euro(salaryToHourly(3000, 35)), exRate30: euro(salaryToHourly(3000, 30)),
+  minWage: euro(minWage.cur.value), minWageMonth: euro(mw.monthly),
+  minWageNextFaq: minWage.next ? `Ab ${dateDe(minWage.next.from)} steigt der Mindestlohn auf ${euro(minWage.next.value)}; das sind dann ${euro(wageInfo({ rate: minWage.next.value, weeklyHours: 40, iso: minWage.next.from }).monthly)} im Monat.` : '',
+  minijob: euroShort(minijob.cur.value), minijobHours: dec1(mjHours), minijobHoursWeek: dec1(Math.floor((mjHours * 3) / 13 * 10) / 10),
+};
+const faqLohn = faqStundenlohn(lohnValues).map((f) => ({ q: f.q, a: f.a.trim() }));
+let salaryRows = '';
+for (let g = 1500; g <= 6000; g += 250) {
+  salaryRows += `<tr><td>${euroShort(g)}</td>${[40, 35, 30, 20].map((h) => `<td>${euro(salaryToHourly(g, h))}</td>`).join('')}</tr>`;
+}
+const lohnTitle = `Stundenlohnrechner ${year} – Stundenlohn brutto berechnen`;
+const lohnDescription = 'Stundenlohn berechnen: Monatsgehalt in Stundenlohn umrechnen und umgekehrt. Mit Formel, Tabelle und Mindestlohn-Check. Kostenlos, ohne Anmeldung.';
+const lohnJsonld = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebApplication',
+      '@id': `${site.url}/stundenlohnrechner#app`,
+      name: 'Stundenlohnrechner',
+      url: `${site.url}/stundenlohnrechner`,
+      description: lohnDescription,
+      applicationCategory: 'FinanceApplication',
+      operatingSystem: 'Alle (Webbrowser)',
+      inLanguage: 'de-DE',
+      isAccessibleForFree: true,
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'EUR' },
+      featureList: 'Monatsgehalt oder Jahresgehalt in Stundenlohn umrechnen, Stundenlohn in Monatslohn und Jahreslohn umrechnen, Mindestlohn-Prüfung, Minijob-Prüfung, Tabelle Gehalt in Stundenlohn',
+    },
+    { '@type': 'FAQPage', '@id': `${site.url}/stundenlohnrechner#faq`, mainEntity: faqEntity(faqLohn) },
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Arbeitszeitrechner', item: `${site.url}/` },
+        { '@type': 'ListItem', position: 2, name: 'Stundenlohnrechner', item: `${site.url}/stundenlohnrechner` },
+      ],
+    },
+  ],
+};
+const lohnPage = fill(readFileSync(src('stundenlohnrechner.html'), 'utf8'), {
+  URL: site.url,
+  ASSETS: assetsPath,
+  CSS: css,
+  HEAD_COMMON: headCommon,
+  HEADER: header('/stundenlohnrechner'),
+  FOOTER: footer('kostenloser Stundenlohnrechner'),
+  MORE_TOOLS: moreTools('/stundenlohnrechner'),
+  JSONLD: jsonldString(lohnJsonld),
+  TITLE: esc(lohnTitle),
+  DESCRIPTION: esc(lohnDescription),
+  YEAR: String(year),
+  STAND: site.stand,
+  FAQ_HTML: renderFaq(faqLohn),
+  SALARY_TABLE: salaryRows,
+  EX_SALARY_RAW: '3000',
+  EX_SALARY: euro(ex.monthly),
+  EX_SALARY_SHORT: '3.000',
+  EX_SALARY_E: euroShort(ex.monthly),
+  EX_YEAR_E: euroShort(ex.yearly),
+  EX_HOURS: '40',
+  EX_RATE: euro(ex.rate),
+  EX_YEAR: euro(ex.yearly),
+  EX_MONTH_HOURS: ex.monthlyHours.toFixed(2).replace('.', ','),
+  MINWAGE: euro(minWage.cur.value),
+  MINWAGE_RAW: minWage.cur.value.toFixed(2).replace('.', ','),
+  MINWAGE_MONTH: euro(mw.monthly),
+  MINWAGE_YEAR: euro(mw.yearly),
+  MINWAGE_SENTENCE: `Der gesetzliche Mindestlohn beträgt seit ${dateDe(minWage.cur.from)} <strong>${euro(minWage.cur.value)} pro Stunde</strong>${minWage.next ? ` und steigt zum ${dateDe(minWage.next.from)} auf <strong>${euro(minWage.next.value)}</strong>` : ''}.`,
+  MINIJOB_SENTENCE: `Die Minijob-Grenze liegt bei ${euroShort(minijob.cur.value)} im Monat${minijob.next ? ` (ab ${dateDe(minijob.next.from)}: ${euroShort(minijob.next.value)})` : ''}.`,
+  MINIJOB_HOURS: lohnValues.minijobHours,
+  MINIJOB_HOURS_WEEK: lohnValues.minijobHoursWeek,
+  PT_SALARY: euroShort(1500),
+  PT_HOURS: '20',
+  PT_RATE: euro(salaryToHourly(1500, 20)),
+  PT2_HOURS: '30',
+  PT2_SALARY: euroShort((ex.monthly * 30) / 40),
+});
+writeFileSync(join(out, 'stundenlohnrechner.html'), lohnPage);
 
 /* ---------- Unterseiten ---------- */
 function page({ title, description, body, robots = 'index,follow', path }) {
@@ -111,10 +252,10 @@ function page({ title, description, body, robots = 'index,follow', path }) {
 <html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(title)}</title><meta name="description" content="${esc(description)}"><meta name="robots" content="${robots}">
 ${path ? `<link rel="canonical" href="${site.url}${path}">` : ''}
-<meta name="color-scheme" content="light dark"><link rel="icon" href="/favicon.ico?v=2" sizes="32x32"><link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml"><link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2"><link rel="manifest" href="/site.webmanifest"><style>${css}</style></head>
-<body><header class="top"><div class="wrap top-in"><a class="brand" href="/"><svg aria-hidden="true" width="26" height="26" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="currentColor"/><circle cx="16" cy="16" r="9" fill="none" stroke="#fff" stroke-width="2.5"/><path d="M16 10.5V16l3.5 2.5" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/></svg><span>derarbeitszeitrechner<span class="tld">.de</span></span></a><nav class="topnav"><a href="/">Zum Rechner</a></nav></div></header>
+${headCommon}<style>${css}</style></head>
+<body>${header(path || '')}
 <main class="wrap legal">${body}</main>
-<footer class="foot"><div class="wrap foot-in"><p>© ${year} derarbeitszeitrechner.de</p><nav aria-label="Rechtliches"><a href="/impressum">Impressum</a> <a href="/datenschutz">Datenschutz</a> <a href="/kontakt">Kontakt</a></nav></div></footer>
+${footer('')}
 </body></html>`;
 }
 
@@ -162,19 +303,20 @@ const staticDir = src('static');
 if (existsSync(staticDir)) for (const f of readdirSync(staticDir)) copyFileSync(join(staticDir, f), join(out, f));
 
 writeFileSync(join(out, 'robots.txt'), `User-agent: *\nAllow: /\nDisallow: /impressum\n\nSitemap: ${site.url}/sitemap.xml\n`);
-const lastmod = toIso(new Date());
+const lastmod = today;
 writeFileSync(join(out, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 <url><loc>${site.url}/</loc><lastmod>${lastmod}</lastmod></url>
+<url><loc>${site.url}/stundenlohnrechner</loc><lastmod>${lastmod}</lastmod></url>
 <url><loc>${site.url}/datenschutz</loc></url>
 <url><loc>${site.url}/kontakt</loc></url>
 </urlset>
 `);
 
 /* ---------- Service Worker (offline) ---------- */
-const precache = ['/', ...jsFiles.map((f) => `${assetsPath}/${f}`), '/favicon.svg', '/icon-192.png', '/site.webmanifest'];
+const precache = ['/', '/stundenlohnrechner', ...jsFiles.map((f) => `${assetsPath}/${f}`), '/favicon.svg', '/icon-192.png', '/site.webmanifest'];
 writeFileSync(join(out, 'sw.js'), `// automatisch erzeugt von scripts/build.mjs
-const CACHE = 'azr-${version}-${createHash('sha256').update(index).digest('hex').slice(0, 8)}';
+const CACHE = 'azr-${version}-${createHash('sha256').update(index).update(lohnPage).digest('hex').slice(0, 8)}';
 const PRECACHE = ${JSON.stringify(precache)};
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
@@ -197,7 +339,7 @@ self.addEventListener('fetch', (e) => {
   e.respondWith(fetch(req).then((res) => {
     if (res.ok && res.type === 'basic') { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }
     return res;
-  }).catch(() => caches.match(req, { ignoreSearch: req.mode === 'navigate' }).then((hit) => hit || (req.mode === 'navigate' ? caches.match('/') : Response.error()))));
+  }).catch(() => caches.match(req, { ignoreSearch: req.mode === 'navigate' }).then((hit) => hit || (req.mode === 'navigate' ? caches.match(url.pathname.replace(/\\/$/, '') || '/').then((page) => page || caches.match('/')) : Response.error()))));
 });
 `);
 
