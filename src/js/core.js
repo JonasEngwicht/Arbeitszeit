@@ -154,7 +154,7 @@ export function calcDay(p) {
   const minor = !!p.minor;
   const res = {
     valid: false, start, end, nextDay: false, gross: 0, breakTotal: 0, breakCounted: 0,
-    shortBreaks: 0, net: 0, required: 0, missing: 0, deducted: 0, night: 0, warnings: [],
+    shortBreaks: 0, net: 0, required: 0, missing: 0, deducted: 0, night: 0, warnings: [], ranges: [], s: 0, e: 0,
   };
   if (start === null || end === null) return res;
   res.valid = true;
@@ -223,6 +223,9 @@ export function calcDay(p) {
     res.missing = lack;
   }
   res.night = nightMinutes(s, e, !!p.bakery);
+  res.ranges = merged;
+  res.s = s;
+  res.e = e;
 
   // Hinweise
   const W = res.warnings;
@@ -317,9 +320,121 @@ export function belowMinWage(rate, iso) {
   return Number.isFinite(r) && r > 0 && r < minWageAt(iso);
 }
 
+/* ---------- Feiertage ---------- */
+
+export function easterSunday(year) {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+const holidayCache = {};
+// Gesetzliche Feiertage: bundesweit plus Bundesland (state = Kürzel wie "BB" oder leer)
+export function holidays(year, state = '') {
+  const key = `${year}|${state}`;
+  if (holidayCache[key]) return holidayCache[key];
+  const easter = easterSunday(year);
+  const h = {};
+  const fix = (md, name) => { h[`${year}-${md}`] = name; };
+  const mov = (offset, name) => { h[addDays(easter, offset)] = name; };
+  const inState = (...list) => list.includes(state);
+  fix('01-01', 'Neujahr');
+  mov(-2, 'Karfreitag');
+  mov(1, 'Ostermontag');
+  fix('05-01', 'Tag der Arbeit');
+  mov(39, 'Christi Himmelfahrt');
+  mov(50, 'Pfingstmontag');
+  fix('10-03', 'Tag der Deutschen Einheit');
+  fix('12-25', '1. Weihnachtstag');
+  fix('12-26', '2. Weihnachtstag');
+  if (inState('BW', 'BY', 'ST')) fix('01-06', 'Heilige Drei Könige');
+  if (inState('BE', 'MV')) fix('03-08', 'Internationaler Frauentag');
+  if (inState('BB')) { mov(0, 'Ostersonntag'); mov(49, 'Pfingstsonntag'); }
+  if (inState('BW', 'BY', 'HE', 'NW', 'RP', 'SL')) mov(60, 'Fronleichnam');
+  if (inState('SL', 'BY')) fix('08-15', 'Mariä Himmelfahrt');
+  if (inState('TH')) fix('09-20', 'Weltkindertag');
+  if (inState('BB', 'HB', 'HH', 'MV', 'NI', 'SN', 'ST', 'SH', 'TH')) fix('10-31', 'Reformationstag');
+  if (inState('BW', 'BY', 'NW', 'RP', 'SL')) fix('11-01', 'Allerheiligen');
+  if (inState('SN')) {
+    const d = parseIso(`${year}-11-22`);
+    d.setDate(d.getDate() - ((d.getDay() + 4) % 7)); // Mittwoch vor dem 23.11.
+    h[toIso(d)] = 'Buß- und Bettag';
+  }
+  holidayCache[key] = h;
+  return h;
+}
+export function holidayName(iso, state = '') {
+  return holidays(+iso.slice(0, 4), state)[iso] || null;
+}
+
+/* ---------- Zuschläge (§ 3b EStG) ---------- */
+
+export function defaultSurcharges() {
+  return { enabled: false, ...LAW.surcharge };
+}
+
+// Liefert Zuschlagsminuten je Art und den Betrag in Cent.
+// result: Ergebnis von calcDay, date: ISO-Datum des Schichtbeginns
+export function calcSurcharges(result, date, profile) {
+  const out = { night: 0, night04: 0, sunday: 0, holiday: 0, special: 0, cents: 0 };
+  const sc = profile.surcharges;
+  if (!sc || !sc.enabled || !result || !result.valid || !date) return out;
+  const { s, e, ranges } = result;
+  const w = LAW.surchargeNight;
+  const info = [0, 1, 2].map((off) => {
+    const iso = addDays(date, off);
+    const md = iso.slice(5);
+    return { wd: parseIso(iso).getDay(), md, hol: !!holidayName(iso, profile.state || '') };
+  });
+  const manualHoliday = result.type === 'feiertag';
+  let counted = 0;
+  for (let m = s; m < e; m++) {
+    if (ranges.some(([a, z]) => m >= a && m < z)) continue;
+    counted++;
+    const off = Math.floor(m / DAY);
+    const mod = m % DAY;
+    const d = info[off];
+    const prev = off > 0 ? info[off - 1] : null;
+    const carry = prev && mod < 240; // 0–4 Uhr zählt zum Vortag, wenn die Schicht davor begann
+    if (mod >= w.from || mod < w.to) {
+      if (carry) out.night04++; else out.night++;
+    }
+    const special = (x) => x.md === '12-25' || x.md === '12-26' || x.md === '05-01';
+    if (special(d) || (carry && special(prev)) || (d.md === '12-24' && mod >= 840)) out.special++;
+    else if (d.hol || (carry && prev.hol) || (d.md === '12-31' && mod >= 840) || (manualHoliday && off === 0)) out.holiday++;
+    else if (d.wd === 0 || (carry && prev.wd === 0)) out.sunday++;
+  }
+  // Pausen ohne Uhrzeit werden anteilig abgezogen
+  const factor = counted > 0 ? Math.min(1, result.net / counted) : 0;
+  const rate = Math.round(Number(profile.wage || 0) * 100);
+  let cents = 0;
+  for (const k of ['night', 'night04', 'sunday', 'holiday', 'special']) {
+    out[k] = Math.round(out[k] * factor);
+    cents += (out[k] * rate * (Number(sc[k]) || 0)) / 100 / 60;
+  }
+  out.cents = Math.round(cents);
+  return out;
+}
+
 /* ---------- Woche / Monat ---------- */
 
 export const weeklyToMonthly = (weeklyMin) => Math.round(weeklyMin * LAW.weeksPerMonth);
+
+export const DAY_TYPES = {
+  work: 'Arbeit', urlaub: 'Urlaub', krank: 'Krank', feiertag: 'Feiertag', ausgleich: 'Überstundenabbau',
+};
 
 export function dailyTarget(profile) {
   const days = profile.workdays?.length || 5;
@@ -329,26 +444,55 @@ function isWorkday(iso, profile) {
   return (profile.workdays || [1, 2, 3, 4, 5]).includes(parseIso(iso).getDay());
 }
 
+// Ein Kalendertag mit Soll, Ist, Gutschrift (Urlaub/Krank) und Zuschlägen
+export function dayInfo(date, entry, profile) {
+  const type = (entry && entry.type) || 'work';
+  const holiday = holidayName(date, profile.state || '');
+  const target = isWorkday(date, profile) ? dailyTarget(profile) : 0;
+  let result = null;
+  if (entry && type === 'work') {
+    result = calcDay({ ...entry, minor: profile.minor, autoDeduct: profile.autoDeduct, bakery: profile.bakery, date });
+  }
+  const valid = !!(result && result.valid);
+  const net = valid ? result.net : 0;
+  let soll = target;
+  let credit = 0;
+  if (holiday || type === 'feiertag') soll = 0;
+  else if (type === 'urlaub' || type === 'krank') credit = target;
+  const surcharge = valid ? calcSurcharges(result, date, profile) : null;
+  return { date, entry, type, holiday, result: valid ? result : (result || null), valid, net, soll, credit, diff: net + credit - soll, surcharge };
+}
+
 function summarize(dates, entries, profile) {
-  const opts = { minor: profile.minor, autoDeduct: profile.autoDeduct, bakery: profile.bakery };
-  const target = dailyTarget(profile);
   let total = 0;
   let soll = 0;
+  let credit = 0;
   let night = 0;
   let workedDays = 0;
+  let surchargeCents = 0;
+  const count = { urlaub: 0, krank: 0, feiertag: 0, ausgleich: 0 };
+  const sur = { night: 0, night04: 0, sunday: 0, holiday: 0, special: 0 };
   const days = dates.map((date) => {
-    const entry = entries[date] || null;
-    const result = entry ? calcDay({ ...entry, ...opts, date }) : null;
-    const net = result && result.valid ? result.net : 0;
-    const daySoll = isWorkday(date, profile) ? target : 0;
-    total += net;
-    soll += daySoll;
-    if (result && result.valid) { night += result.night; if (net > 0) workedDays++; }
-    return { date, entry, result, net, soll: daySoll, diff: net - daySoll };
+    const d = dayInfo(date, entries[date] || null, profile);
+    total += d.net;
+    soll += d.soll;
+    credit += d.credit;
+    if (d.type in count) count[d.type]++;
+    if (d.valid) {
+      night += d.result.night;
+      if (d.net > 0) workedDays++;
+      surchargeCents += d.surcharge.cents;
+      for (const k of Object.keys(sur)) sur[k] += d.surcharge[k];
+    }
+    return d;
   });
   const rest = restViolations(dates.map((d) => entries[d] && { ...entries[d], date: d }).filter(Boolean), profile.minor);
-  const pay = profile.wage ? wageCents(total, profile.wage) : 0;
-  return { days, total, soll, saldo: total - soll, overtime: Math.max(0, total - soll), night, workedDays, rest, pay };
+  const basePay = profile.wage ? wageCents(total + credit, profile.wage) : 0;
+  const saldo = total + credit - soll;
+  return {
+    days, total, soll, credit, saldo, overtime: Math.max(0, saldo), night, workedDays, rest, count,
+    surcharges: sur, surchargeCents, basePay, pay: basePay + surchargeCents,
+  };
 }
 
 export function weekSummary(entries, anyIso, profile) {
@@ -367,6 +511,90 @@ export function monthSummary(entries, year, month, profile) {
     minijobLimit: minijobAt(first),
     overMinijob: profile.wage ? s.pay > minijobAt(first) * 100 : false,
   };
+}
+
+/* ---------- Überstundenkonto ---------- */
+
+// Kontostand bis einschließlich uptoIso: Startsaldo + Plus/Minus aller Tage ab Kontobeginn.
+// Kontobeginn = profile.accountStart oder der erste Eintrag.
+export function accountBalance(entries, profile, uptoIso) {
+  const dates = Object.keys(entries).sort();
+  const start = profile.accountStart || dates[0];
+  const base = Number(profile.startBalance) || 0;
+  if (!start || start > uptoIso) return { start: start || null, balance: base, days: 0 };
+  let balance = base;
+  let days = 0;
+  for (let d = start; d <= uptoIso; d = addDays(d, 1)) {
+    balance += dayInfo(d, entries[d] || null, profile).diff;
+    days++;
+    if (days > 3700) break;
+  }
+  return { start, balance, days };
+}
+
+/* ---------- Gehalt ↔ Stundenlohn ---------- */
+
+// Übliche Formel: Monatsgehalt × 3 ÷ 13 ÷ Wochenstunden (13 Wochen je Quartal)
+export function salaryToHourly(monthlyEuro, weeklyHours) {
+  if (!(monthlyEuro > 0) || !(weeklyHours > 0)) return null;
+  return Math.round(((monthlyEuro * 3) / 13 / weeklyHours) * 100) / 100;
+}
+export function hourlyToSalary(hourlyEuro, weeklyHours) {
+  if (!(hourlyEuro > 0) || !(weeklyHours > 0)) return null;
+  return Math.round(((hourlyEuro * weeklyHours * 13) / 3) * 100) / 100;
+}
+
+/* ---------- Teilen-Link ---------- */
+
+function b64urlEncode(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = '';
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function b64urlDecode(s) {
+  const bin = atob(s.replace(/-/g, '+').replace(/_/g, '/'));
+  return new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0)));
+}
+// Packt einen Monat (ohne Lohn) in einen kurzen Text für das URL-Fragment
+export function encodeShare(entries, profile, year, month) {
+  const prefix = `${year}-${String(month).padStart(2, '0')}-`;
+  const e = Object.keys(entries).filter((d) => d.startsWith(prefix)).sort().map((d) => {
+    const x = entries[d];
+    const row = [+d.slice(8), x.start || '', x.end || '', x.breaks || []];
+    if (x.type && x.type !== 'work') row.push(x.type);
+    return row;
+  });
+  return b64urlEncode(JSON.stringify({
+    v: 1, n: profile.name, w: profile.weeklyMinutes, d: profile.workdays, s: profile.state || '', y: year, m: month, e,
+  }));
+}
+export function decodeShare(text) {
+  try {
+    const o = JSON.parse(b64urlDecode(text));
+    if (o.v !== 1 || !Number.isInteger(o.y) || !Number.isInteger(o.m) || o.m < 1 || o.m > 12 || !Array.isArray(o.e)) return null;
+    const entries = {};
+    for (const r of o.e) {
+      if (!Array.isArray(r) || !Number.isInteger(r[0]) || r[0] < 1 || r[0] > 31) continue;
+      const date = `${o.y}-${String(o.m).padStart(2, '0')}-${String(r[0]).padStart(2, '0')}`;
+      const breaks = (Array.isArray(r[3]) ? r[3] : []).slice(0, 20).map((b) => (b && b.kind === 'range'
+        ? { kind: 'range', from: String(b.from || '').slice(0, 5), to: String(b.to || '').slice(0, 5) }
+        : { kind: 'min', minutes: Math.max(0, Math.min(1440, Number(b && b.minutes) || 0)) }));
+      const type = Object.prototype.hasOwnProperty.call(DAY_TYPES, r[4]) ? r[4] : 'work';
+      entries[date] = { date, start: String(r[1] || '').slice(0, 5), end: String(r[2] || '').slice(0, 5), breaks, type };
+    }
+    const workdays = (Array.isArray(o.d) ? o.d : [1, 2, 3, 4, 5]).filter((x) => Number.isInteger(x) && x >= 0 && x <= 6);
+    return {
+      year: o.y, month: o.m, entries,
+      profile: {
+        name: String(o.n || 'Geteilter Monat').slice(0, 60),
+        weeklyMinutes: Math.max(0, Math.min(6000, Number(o.w) || 2400)),
+        workdays: workdays.length ? workdays : [1, 2, 3, 4, 5], state: String(o.s || '').slice(0, 2),
+      },
+    };
+  } catch {
+    return null;
+  }
 }
 
 /* ---------- Feierabend ---------- */

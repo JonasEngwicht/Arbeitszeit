@@ -16,15 +16,16 @@ export function exportMonth(kind, data) {
 
 function csv(d) {
   const q = (v) => (/[;"\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
-  const lines = [['Datum', 'Tag', 'Beginn', 'Ende', 'Pause (Min.)', 'Arbeitszeit (h:mm)', 'Arbeitszeit (dezimal)', 'Soll (h:mm)', 'Plus/Minus (h:mm)', 'Nachtarbeit (h:mm)']];
+  const lines = [['Datum', 'Tag', 'Beginn', 'Ende', 'Pause (Min.)', 'Arbeitszeit (h:mm)', 'Arbeitszeit (dezimal)', 'Soll (h:mm)', 'Plus/Minus (h:mm)', 'Nachtarbeit (h:mm)', 'Bemerkung']];
   for (const r of d.rows) {
     const has = r.net !== null;
     lines.push([r.dateDe, r.weekday, r.start, r.end, has ? r.breakMin : '', has ? formatHM(r.net) : '', has ? formatDecimal(r.net) : '',
-      formatHM(r.soll), has || r.soll ? formatHM(r.diff, { sign: true }).replace('−', '-') : '', has && r.night ? formatHM(r.night) : '']);
+      formatHM(r.soll), has || r.soll ? formatHM(r.diff, { sign: true }).replace('−', '-') : '', has && r.night ? formatHM(r.night) : '', r.note || '']);
   }
   lines.push([]);
   lines.push(['Summe', '', '', '', '', formatHM(d.total), formatDecimal(d.total), formatHM(d.soll), formatHM(d.saldo, { sign: true }).replace('−', '-'), formatHM(d.night)]);
   if (d.wage) lines.push(['Brutto', '', '', '', '', '', formatEuro(d.pay).replace(' €', ''), '', '', '']);
+  if (d.wage && d.surcharge) lines.push(['davon Zuschläge', '', '', '', '', '', formatEuro(d.surcharge).replace(' €', ''), '', '', '']);
   const text = `﻿${lines.map((l) => l.map(q).join(';')).join('\r\n')}\r\n`;
   return new Blob([text], { type: 'text/csv;charset=utf-8' });
 }
@@ -155,13 +156,13 @@ const tm = (hhmm) => { if (!hhmm) return ''; const [h, m] = hhmm.split(':').map(
 
 function xlsxMonth(d) {
   const H = (v) => ({ v, s: S.head });
-  const rows = [[H('Datum'), H('Tag'), H('Beginn'), H('Ende'), H('Pause (Min.)'), H('Arbeitszeit'), H('Dezimal'), H('Soll'), H('Plus/Minus (dez.)')]];
+  const rows = [[H('Datum'), H('Tag'), H('Beginn'), H('Ende'), H('Pause (Min.)'), H('Arbeitszeit'), H('Dezimal'), H('Soll'), H('Plus/Minus (dez.)'), H('Bemerkung')]];
   for (const r of d.rows) {
     const has = r.net !== null;
     rows.push([
       { v: excelDate(r.date), s: S.date }, r.weekday, { v: tm(r.start), s: S.time }, { v: tm(r.end), s: S.time },
-      has ? { v: r.breakMin, s: S.int } : '', has ? { v: r.net / 1440, s: S.dur } : '', has ? { v: Math.round(r.net / 0.6) / 100, s: S.dec } : '',
-      { v: r.soll / 1440, s: S.dur }, has || r.soll ? { v: Math.round(r.diff / 0.6) / 100, s: S.dec } : '',
+      has && r.breakMin !== '' ? { v: r.breakMin, s: S.int } : '', has ? { v: r.net / 1440, s: S.dur } : '', has ? { v: Math.round(r.net / 0.6) / 100, s: S.dec } : '',
+      { v: r.soll / 1440, s: S.dur }, has || r.soll ? { v: Math.round(r.diff / 0.6) / 100, s: S.dec } : '', r.note || '',
     ]);
   }
   const last = rows.length;
@@ -170,11 +171,12 @@ function xlsxMonth(d) {
   const sumRow = rows.length;
   if (d.wage) {
     rows.push([{ v: 'Stundenlohn', s: S.bold }, '', '', '', '', '', { v: d.wage, s: S.eur }]);
-    rows.push([{ v: 'Brutto', s: S.bold }, '', '', '', '', '', { f: `ROUND(G${sumRow}*G${sumRow + 1},2)`, s: S.boldEur }]);
+    if (d.surcharge) rows.push([{ v: 'Zuschläge', s: S.bold }, '', '', '', '', '', { v: d.surcharge / 100, s: S.eur }]);
+    rows.push([{ v: 'Brutto', s: S.bold }, '', '', '', '', '', { f: `ROUND(G${sumRow}*G${sumRow + 1},2)${d.surcharge ? `+G${sumRow + 2}` : ''}`, s: S.boldEur }]);
   }
   rows.push(null);
   rows.push([`${d.profile} – erstellt mit derarbeitszeitrechner.de`]);
-  return workbook([{ name: d.title, rows, widths: [12, 6, 9, 9, 12, 12, 10, 10, 16] }]);
+  return workbook([{ name: d.title, rows, widths: [12, 6, 9, 9, 12, 12, 10, 10, 16, 24] }]);
 }
 
 // Leere Jahresvorlage: 12 Blätter mit Formeln (Nachtschicht-fähig)
@@ -246,7 +248,7 @@ function pdf(d) {
   const cols = [
     { k: 'Datum', x: 40 }, { k: 'Tag', x: 100 }, { k: 'Beginn', x: 128 }, { k: 'Ende', x: 172 },
     { k: 'Pause', x: 255, r: true }, { k: 'Arbeitszeit', x: 320, r: true }, { k: 'Dezimal', x: 375, r: true },
-    { k: 'Soll', x: 425, r: true }, { k: '+/−', x: 480, r: true }, { k: 'Unterschrift', x: 492 },
+    { k: 'Soll', x: 425, r: true }, { k: '+/−', x: 480, r: true }, { k: 'Bemerkung', x: 490 },
   ];
   let y = 752;
   rect(36, y - 4, 523, 16, 0.88);
@@ -257,9 +259,9 @@ function pdf(d) {
     const wd = r.weekday;
     if (wd === 'Sa' || wd === 'So') rect(36, y - 4, 523, rowH, 0.95);
     const has = r.net !== null;
-    const vals = [r.dateDe, wd, r.start, r.end ? `${r.end}${r.nextDay ? ' +1' : ''}` : '', has ? `${r.breakMin} Min.` : '',
+    const vals = [r.dateDe, wd, r.start, r.end ? `${r.end}${r.nextDay ? ' +1' : ''}` : '', has && r.breakMin !== '' ? `${r.breakMin} Min.` : '',
       has ? formatHM(r.net) : '', has ? formatDecimal(r.net) : '', r.soll ? formatHM(r.soll) : '',
-      has || r.soll ? formatHM(r.diff, { sign: true }) : '', ''];
+      has || r.soll ? formatHM(r.diff, { sign: true }) : '', (r.note || '').slice(0, 16)];
     cols.forEach((c, i) => { if (vals[i]) text(c.x, y, vals[i], { right: c.r }); });
     line(36, y - 4.5, 559, y - 4.5, 0.3, 0.8);
     y -= rowH;
@@ -274,7 +276,7 @@ function pdf(d) {
   y -= 18;
   const extra = [`Überstunden: ${formatHM(d.overtime)} h`];
   if (d.night) extra.push(`Nachtarbeit: ${formatHM(d.night)} h`);
-  if (d.wage) extra.push(`Brutto: ${formatEuro(d.pay)} (${formatEuro(Math.round(d.wage * 100))}/h)`);
+  if (d.wage) extra.push(`Brutto: ${formatEuro(d.pay)} (${formatEuro(Math.round(d.wage * 100))}/h${d.surcharge ? `, inkl. ${formatEuro(d.surcharge)} Zuschläge` : ''})`);
   text(40, y, extra.join('   ·   '), { size: 9.5 });
 
   const sy = Math.min(y - 55, 110);

@@ -33,6 +33,14 @@ export const FAQ = [
     a: 'Ziehe deine Sollzeit von der tatsächlich geleisteten Arbeitszeit ab. Bei 40 Stunden Soll und 43:30 Stunden Ist hast du 3:30 Überstunden gemacht. Trage im Rechner deine Wochenstunden ein – Wochen- und Monatsansicht zeigen Plus und Minus pro Tag und den Saldo automatisch.',
   },
   {
+    q: 'Wie berechne ich meinen Stundenlohn aus dem Monatsgehalt?',
+    a: 'Mit der Formel Monatsgehalt × 3 ÷ 13 ÷ Wochenstunden. Bei 3.000 € brutto und 40 Stunden pro Woche sind das 17,31 € pro Stunde. Der Gehalts-Stundenrechner im Tab „Lohn“ rechnet beide Richtungen und zeigt, ob der Stundenlohn über dem Mindestlohn liegt.',
+  },
+  {
+    q: 'Kann ich den Rechner als App und offline nutzen?',
+    a: 'Ja. Auf Android und am PC erscheint der Knopf „App installieren“ oder du wählst im Browser-Menü „App installieren“. Auf dem iPhone tippst du in Safari auf „Teilen“ und dann auf „Zum Home-Bildschirm“. Danach startet der Rechner wie eine App und funktioniert auch ohne Internet. Auf dem iPhone bleiben deine Einträge so außerdem dauerhaft erhalten.',
+  },
+  {
     q: 'Werden meine Daten gespeichert oder übertragen?',
     a: 'Deine Einträge werden nur lokal in deinem Browser gespeichert (IndexedDB) und nie an einen Server übertragen. Es gibt kein Konto und keine Anmeldung. Über „Datensicherung“ in der Monatsansicht kannst du deine Daten als Datei sichern und auf einem anderen Gerät wieder einspielen. Löschst du die Browserdaten, sind auch die Einträge weg.',
   },

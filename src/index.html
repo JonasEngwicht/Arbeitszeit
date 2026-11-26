@@ -50,6 +50,7 @@
     <h1 id="h1">Arbeitszeitrechner</h1>
     <p class="sub">Stundenrechner mit Pausen, Woche, Monat und Lohn – kostenlos und ohne Anmeldung</p>
 
+    <div class="card shared" id="shared" hidden></div>
     <div class="card calc" id="calc">
       <div class="calc-head">
         <div class="tabs" role="tablist" aria-label="Rechner wählen">
@@ -59,11 +60,17 @@
           <button role="tab" id="tab-feierabend" aria-controls="feierabend" aria-selected="false" tabindex="-1" data-tab="feierabend">Feierabend</button>
           <button role="tab" id="tab-addieren" aria-controls="addieren" aria-selected="false" tabindex="-1" data-tab="addieren">Addieren</button>
           <button role="tab" id="tab-dezimal" aria-controls="dezimal" aria-selected="false" tabindex="-1" data-tab="dezimal">Dezimal</button>
+          <button role="tab" id="tab-lohn" aria-controls="lohn" aria-selected="false" tabindex="-1" data-tab="lohn">Lohn</button>
         </div>
       </div>
 
       <!-- TAG -->
       <div role="tabpanel" id="tag" aria-labelledby="tab-tag" class="panel">
+        <div class="stamp" role="group" aria-label="Stempeluhr">
+          <button type="button" class="btn-stamp" id="d-in">▶ Kommen</button>
+          <button type="button" class="btn-stamp" id="d-out">■ Gehen</button>
+          <span class="stamp-state" id="d-stamp" aria-live="polite">Stempeluhr: speichert die aktuelle Uhrzeit</span>
+        </div>
         <div class="times">
           <div class="field">
             <label for="d-start">Beginn</label>
@@ -91,7 +98,7 @@
         <div class="result" id="d-result" aria-live="polite">
           <div class="res-main">
             <div>
-              <div class="res-label">Arbeitszeit</div>
+              <div class="res-label" id="r-label">Arbeitszeit</div>
               <div class="res-big"><span id="r-hm">{{PRE_HM}}</span> h</div>
               <div class="res-dec">= <span id="r-dec">{{PRE_DEC}}</span> h dezimal <span class="badge" id="r-next" hidden>+1 Tag</span></div>
             </div>
@@ -102,6 +109,7 @@
             <div><dt>Pausen</dt><dd id="r-break">{{PRE_BREAK}} h</dd></div>
             <div id="r-night-wrap" hidden><dt>Nachtarbeit (23–6 Uhr)</dt><dd id="r-night"></dd></div>
             <div id="r-pay-wrap" hidden><dt>Brutto</dt><dd id="r-pay"></dd></div>
+            <div id="r-sur-wrap" hidden><dt>davon Zuschläge</dt><dd id="r-sur"></dd></div>
             <div id="r-diff-wrap" hidden><dt>Plus/Minus zum Soll</dt><dd id="r-diff"></dd></div>
           </dl>
           <ul class="notes" id="r-notes"><li class="note ok">Pausen und Höchstarbeitszeit nach Arbeitszeitgesetz eingehalten.</li></ul>
@@ -109,6 +117,8 @@
         <div class="row-date">
           <label class="lbl-inline" for="d-date">Datum</label>
           <input type="date" id="d-date" class="in in-date" value="{{TODAY}}">
+          <label class="lbl-inline" for="d-type">Art</label>
+          <select id="d-type" class="in in-date"><option value="work">Arbeit</option><option value="urlaub">Urlaub</option><option value="krank">Krank</option><option value="feiertag">Feiertag</option><option value="ausgleich">Überstundenabbau</option></select>
           <span class="save-state" id="d-save" aria-live="polite"></span>
         </div>
         <div class="chips" role="group" aria-label="Vorlagen"><span class="chips-l">Vorlagen</span>
@@ -116,7 +126,6 @@
           <button type="button" class="chip" data-tpl="09:00|17:00|30">9–17</button>
           <button type="button" class="chip" data-tpl="07:00|15:30|30">7–15:30</button>
           <button type="button" class="chip" data-tpl="22:00|06:00|30">Nachtschicht 22–6</button>
-          <button type="button" class="chip chip-alt" id="d-now">Ende = jetzt</button>
           <button type="button" class="chip chip-alt" id="d-copy-prev" hidden>Gestern kopieren</button>
         </div>
         <p class="hint" id="hint-time">Tipp: „830“ wird zu 08:30, „8“ zu 08:00.</p>
@@ -138,6 +147,7 @@
             <tbody id="w-body"></tbody>
           </table>
         </div>
+        <div class="btn-row week-actions"><button type="button" class="btn-ghost" id="w-fill">Woche ausfüllen</button><span class="hint" id="w-fill-hint">Kopiert den ersten Eintrag der Woche auf alle leeren Arbeitstage.</span></div>
         <div class="sum-grid" id="w-sum"></div>
         <ul class="notes" id="w-notes"></ul>
       </div>
@@ -159,7 +169,9 @@
             <button type="button" class="btn" data-export="pdf">PDF-Stundenzettel</button>
             <button type="button" class="btn" data-export="csv">CSV</button>
             <button type="button" class="btn" data-export="print">Drucken</button>
+            <button type="button" class="btn-ghost" id="m-share">Monat als Link teilen</button>
           </div>
+          <p class="hint">Der Teilen-Link enthält deine Zeiten direkt in der Adresse (hinter dem #). Sie werden nicht an unseren Server übertragen; der Stundenlohn wird nicht geteilt.</p>
           <details class="backup">
             <summary>Datensicherung (JSON)</summary>
             <p class="hint">Alle Jobs und Einträge als Datei sichern oder auf einem anderen Gerät wiederherstellen.</p>
@@ -242,6 +254,35 @@
         <p class="hint"><a href="#dezimal-tabelle">Zur Tabelle 1–60 Minuten in Dezimal</a></p>
       </div>
 
+      <!-- LOHN -->
+      <div role="tabpanel" id="lohn" aria-labelledby="tab-lohn" class="panel" hidden>
+        <p class="lead">Gehalts-Stundenrechner: Monatsgehalt in Stundenlohn umrechnen – und umgekehrt.</p>
+        <div class="times">
+          <div class="field">
+            <label for="g-salary">Monatsgehalt brutto (€)</label>
+            <input id="g-salary" class="in in-time" type="text" inputmode="decimal" autocomplete="off" value="3000">
+          </div>
+          <div class="field">
+            <label for="g-hours">Wochenstunden</label>
+            <input id="g-hours" class="in in-time" type="text" inputmode="decimal" autocomplete="off" value="40">
+          </div>
+        </div>
+        <div class="result" aria-live="polite">
+          <div class="res-label">Stundenlohn brutto</div>
+          <div class="res-big"><span id="g-rate">17,31 €</span></div>
+          <div class="res-dec" id="g-detail">3.000,00 € × 3 ÷ 13 ÷ 40 Stunden</div>
+          <ul class="notes" id="g-notes"></ul>
+        </div>
+        <div class="row-actions"><button type="button" class="btn-ghost" id="g-apply">Als meinen Stundenlohn übernehmen</button></div>
+        <div class="conv">
+          <div class="field">
+            <label for="g-rate-in">Umgekehrt: Stundenlohn (€)</label>
+            <input id="g-rate-in" class="in" type="text" inputmode="decimal" autocomplete="off" value="15">
+          </div>
+          <div class="conv-out" aria-live="polite">= <strong id="g-salary-out">2.600,00 €</strong> im Monat</div>
+        </div>
+      </div>
+
       <details class="settings" id="settings">
         <summary>Einstellungen: Job, Sollzeit, Stundenlohn, unter 18</summary>
         <div class="set-grid">
@@ -264,6 +305,14 @@
             <label for="p-wage">Stundenlohn (€, optional)</label>
             <input id="p-wage" class="in in-num" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 15,00">
           </div>
+          <div class="field">
+            <label for="p-state">Bundesland (für Feiertage)</label>
+            <select id="p-state" class="in"></select>
+          </div>
+          <div class="field">
+            <label for="p-balance">Überstundenkonto: Startsaldo (h)</label>
+            <input id="p-balance" class="in in-num" type="text" inputmode="text" autocomplete="off" placeholder="z. B. 12:30 oder -4">
+          </div>
           <fieldset class="field wd">
             <legend>Arbeitstage</legend>
             <div class="wd-list" id="p-days"></div>
@@ -272,7 +321,20 @@
             <label class="check"><input type="checkbox" id="p-minor"> Unter 18 (Jugendarbeitsschutzgesetz)</label>
             <label class="check"><input type="checkbox" id="p-auto"> Mindestpause abziehen, wenn weniger eingetragen</label>
             <label class="check"><input type="checkbox" id="p-bakery"> Bäckerei/Konditorei (Nachtzeit 22–5 Uhr)</label>
+            <label class="check"><input type="checkbox" id="p-minijob"> Minijob: warnen, wenn der Monatsverdienst die Minijob-Grenze überschreitet</label>
+            <label class="check"><input type="checkbox" id="p-sur"> Zuschläge für Nacht, Sonntag und Feiertag berechnen</label>
           </div>
+          <fieldset class="field sur" id="p-sur-box" hidden>
+            <legend>Zuschläge in Prozent vom Stundenlohn</legend>
+            <div class="sur-grid">
+              <label>Nacht 20–6 Uhr <input id="p-sur-night" class="in in-num" type="text" inputmode="decimal" autocomplete="off"></label>
+              <label>Nacht 0–4 Uhr <input id="p-sur-night04" class="in in-num" type="text" inputmode="decimal" autocomplete="off"></label>
+              <label>Sonntag <input id="p-sur-sunday" class="in in-num" type="text" inputmode="decimal" autocomplete="off"></label>
+              <label>Feiertag <input id="p-sur-holiday" class="in in-num" type="text" inputmode="decimal" autocomplete="off"></label>
+              <label>Weihnachten, 1. Mai <input id="p-sur-special" class="in in-num" type="text" inputmode="decimal" autocomplete="off"></label>
+            </div>
+            <p class="hint">Vorbelegt mit den steuerfreien Höchstsätzen nach § 3b EStG. Dein Tarif- oder Arbeitsvertrag geht vor – passe die Werte an. Nacht- und Sonntags-/Feiertagszuschlag werden addiert. Der Stundenlohn muss eingetragen sein.</p>
+          </fieldset>
         </div>
         <button type="button" class="btn-link danger" id="p-delete">Diesen Job löschen</button>
       </details>
@@ -280,6 +342,7 @@
       <p class="privacy"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5Zm-3 8V7a3 3 0 1 1 6 0v3H9Z"/></svg> Deine Eingaben bleiben auf deinem Gerät und werden nur in deinem Browser gespeichert.</p>
     </div>
     <ul class="trust" aria-label="Vorteile"><li>Kostenlos</li><li>Ohne Anmeldung</li><li>Daten bleiben im Browser</li><li>Prüfung nach Arbeitszeitgesetz</li></ul>
+    <p class="install" id="install-box" hidden><button type="button" class="btn-ghost" id="install">App installieren</button> <span class="hint">Legt den Rechner als App auf deinen Startbildschirm – funktioniert dann auch offline.</span></p>
     <p class="disclaimer">Ergebnis ohne Gewähr, keine Rechtsberatung. Tarifverträge und Betriebsvereinbarungen können abweichen.</p>
   </div>
 </section>
@@ -306,7 +369,7 @@
 </ul>
 <p>Eine Nachtschicht zählt immer zu dem Tag, an dem sie beginnt. In der Wochen- und Monatsansicht prüft der Rechner zusätzlich, ob zwischen zwei Schichten die vorgeschriebenen 11 Stunden Ruhezeit liegen.</p>
 <h3>Arbeitszeit speichern: Woche und Monat</h3>
-<p>Alles, was du im Tagesrechner einträgst, wird für das gewählte Datum in deinem Browser gespeichert – ganz ohne Konto. In der Wochenansicht siehst du alle Tage von Montag bis Sonntag mit Plus und Minus zur Sollzeit, in der Monatsansicht die Summe des echten Kalendermonats, dein Soll, den Saldo und deine Überstunden. Mit „Gestern kopieren“ übernimmst du gleiche Schichten mit einem Tipp. Für mehrere Jobs legst du in den Einstellungen einfach weitere Profile an.</p>
+<p>Mit der Stempeluhr geht es noch schneller: Ein Tipp auf „Kommen“ speichert die aktuelle Uhrzeit als Arbeitsbeginn, ein Tipp auf „Gehen“ das Arbeitsende. Alles, was du im Tagesrechner einträgst, wird für das gewählte Datum in deinem Browser gespeichert – ganz ohne Konto. In der Wochenansicht siehst du alle Tage von Montag bis Sonntag mit Plus und Minus zur Sollzeit, in der Monatsansicht die Summe des echten Kalendermonats, dein Soll, den Saldo und deine Überstunden. Mit „Gestern kopieren“ übernimmst du gleiche Schichten mit einem Tipp. Für mehrere Jobs legst du in den Einstellungen einfach weitere Profile an.</p>
 </section>
 
 <section aria-labelledby="h-pause">
@@ -346,6 +409,10 @@
 <p>Du hast mehrere Einsätze, Projekte oder Schichten und willst die Arbeitsstunden zusammenrechnen? Im Tab „Addieren“ arbeitet der Stundenrechner zum Addieren zeilenweise: Trage Dauern wie „7:45“ oder „7,75“ oder Zeiträume wie „8:00-12:30“ ein. Du kannst Zeilen auch abziehen und siehst Summe und Differenz in Stunden und Minuten und als Dezimalzahl.</p>
 <h3>Feierabendrechner: Wann kann ich gehen?</h3>
 <p>In Gleitzeit zählt oft nur eine Frage: Wann habe ich Feierabend? Im Tab „Feierabend“ gibst du Arbeitsbeginn und Sollzeit ein. Der Rechner addiert die gesetzliche Mindestpause und zeigt dir die früheste Uhrzeit, zu der du gehen kannst – und bis wann du wegen der Höchstarbeitszeit spätestens gehen musst.</p>
+<h3>Urlaub, Krankheit und Feiertage</h3>
+<p>Damit dein Saldo stimmt, kannst du jeden Tag als Urlaub, Krank, Feiertag oder Überstundenabbau markieren. Urlaubs- und Krankheitstage werden mit deiner täglichen Sollzeit gutgeschrieben. Gesetzliche Feiertage erkennt der Rechner automatisch und zieht sie vom Soll ab – bundesweite Feiertage immer, regionale wie Fronleichnam oder den Reformationstag, sobald du in den Einstellungen dein Bundesland wählst.</p>
+<h3>Überstundenkonto</h3>
+<p>Die Monatsansicht führt ein Überstundenkonto: Plus- und Minusstunden werden ab deinem ersten Eintrag fortlaufend von Monat zu Monat übertragen. Bringst du schon Überstunden mit, trägst du sie in den Einstellungen als Startsaldo ein.</p>
 <h3>Überstunden berechnen</h3>
 <p>Überstunden sind die Differenz zwischen geleisteter Arbeitszeit und deiner Sollzeit: <strong>Überstunden = Ist-Stunden − Soll-Stunden</strong>. Hast du in einer 40-Stunden-Woche 43:30 Stunden gearbeitet, sind das 3:30 Überstunden. Ein negatives Ergebnis bedeutet Minusstunden. Wochen- und Monatsansicht rechnen das automatisch für dich.</p>
 </section>
@@ -371,8 +438,11 @@
 <section aria-labelledby="h-lohn">
 <h2 id="h-lohn">Stundenrechner mit Lohn</h2>
 <p>Trägst du in den Einstellungen deinen Stundenlohn ein, berechnet der Rechner deinen Bruttolohn für den Tag, die Woche und den Monat: <strong>Brutto = Arbeitsstunden (dezimal) × Stundenlohn</strong>. Bei 8 Stunden und 13,90 € pro Stunde sind das 111,20 € brutto.</p>
-<p>Der gesetzliche Mindestlohn beträgt seit 1. Januar 2026 <strong>13,90 € pro Stunde</strong> und steigt zum 1. Januar 2027 auf <strong>14,60 €</strong>. Liegt dein eingegebener Stundenlohn darunter, zeigt der Rechner einen Hinweis. Für Minijobs gilt 2026 eine Verdienstgrenze von 603 € im Monat (ab 2027: 633 €) – die Monatsansicht warnt, wenn dein Brutto darüber liegt.</p>
-<p>Zuschläge für Nacht-, Sonntags- und Feiertagsarbeit sind nicht eingerechnet. Ob und in welcher Höhe sie dir zustehen, regeln Arbeitsvertrag oder Tarifvertrag.</p>
+<p>Der gesetzliche Mindestlohn beträgt seit 1. Januar 2026 <strong>13,90 € pro Stunde</strong> und steigt zum 1. Januar 2027 auf <strong>14,60 €</strong>. Liegt dein eingegebener Stundenlohn darunter, zeigt der Rechner einen Hinweis. Für Minijobs gilt 2026 eine Verdienstgrenze von 603 € im Monat (ab 2027: 633 €). Aktivierst du in den Einstellungen den Minijob-Check, warnt die Monatsansicht, sobald dein Brutto darüber liegt, und zeigt, wie viel bis zur Grenze noch bleibt.</p>
+<h3>Zuschläge für Nacht, Sonntag und Feiertag</h3>
+<p>Auf Wunsch rechnet der Rechner Zuschläge mit: Aktiviere sie in den Einstellungen und trage deine Prozentsätze ein. Vorbelegt sind die steuerfreien Höchstsätze nach § 3b EStG: 25 % für Nachtarbeit von 20 bis 6 Uhr (40 % von 0 bis 4 Uhr, wenn die Schicht vor Mitternacht begann), 50 % für Sonntagsarbeit, 125 % an gesetzlichen Feiertagen und 150 % an den Weihnachtsfeiertagen und am 1. Mai. Ob und in welcher Höhe dir Zuschläge zustehen, regeln Arbeitsvertrag oder Tarifvertrag. Achtung: Die Nachtzeit für Zuschläge (20–6 Uhr) ist eine andere als die Nachtzeit im Arbeitszeitgesetz (23–6 Uhr).</p>
+<h3>Gehalts-Stundenrechner: Stundenlohn aus dem Monatsgehalt</h3>
+<p>Du bekommst ein festes Monatsgehalt und willst deinen Stundenlohn wissen? Die übliche Formel lautet: <strong>Stundenlohn = Monatsgehalt × 3 ÷ 13 ÷ Wochenstunden</strong>. Sie rechnet mit 13 Wochen pro Quartal. Beispiel: 3.000 € bei 40 Wochenstunden ergeben 3.000 × 3 ÷ 13 ÷ 40 = 17,31 € pro Stunde. Im Tab „Lohn“ rechnest du beide Richtungen und übernimmst das Ergebnis mit einem Tipp als deinen Stundenlohn.</p>
 </section>
 
 <section aria-labelledby="h-excel">

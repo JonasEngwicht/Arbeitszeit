@@ -2,19 +2,22 @@ import {
   calcDay, parseTime, parseDuration, formatHM, formatDecimal, formatClock, formatEuro, wageCents,
   belowMinWage, minWageAt, restViolations, weekSummary, monthSummary, quittingTime, sumRows,
   toIso, parseIso, addDays, mondayOf, isoWeek, dailyTarget, WEEKDAYS, WEEKDAYS_SHORT, MONTHS,
+  dayInfo, holidayName, accountBalance, defaultSurcharges, salaryToHourly, hourlyToSalary,
+  encodeShare, decodeShare, daysInMonth, DAY_TYPES,
 } from './core.js';
+import { STATES } from './config.js';
 import * as store from './store.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-const TABS = ['tag', 'woche', 'monat', 'feierabend', 'addieren', 'dezimal'];
+const TABS = ['tag', 'woche', 'monat', 'feierabend', 'addieren', 'dezimal', 'lohn'];
 const todayIso = () => toIso(new Date());
 const nowMin = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); };
 const fmtDate = (iso, opts = { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' }) => parseIso(iso).toLocaleDateString('de-DE', opts);
 
 const DEFAULT_PROFILE = () => ({
   id: `p${Date.now().toString(36)}`, name: 'Mein Job', weeklyMinutes: 2400, workdays: [1, 2, 3, 4, 5],
-  wage: null, minor: false, autoDeduct: false, bakery: false,
+  wage: null, minor: false, autoDeduct: false, bakery: false, state: '', startBalance: 0, surcharges: defaultSurcharges(),
 });
 
 const state = {
@@ -72,9 +75,14 @@ function normalizeTimeInput(el) {
 function saldoToDate(days) {
   const t = todayIso();
   if (!days.length || days[0].date > t || days[days.length - 1].date <= t) return null;
-  return days.filter((d) => d.date <= t).reduce((a, d) => a + d.diff, 0);
+  const st = accStart();
+  return days.filter((d) => d.date <= t && st && d.date >= st).reduce((a, d) => a + d.diff, 0);
 }
-const isFutureEmpty = (d) => d.date > todayIso() && !(d.result && d.result.valid);
+// Kontobeginn: ab hier zählen leere Tage als Minus (davor und in der Zukunft bleiben sie neutral)
+const accStart = () => state.profile.accountStart || Object.keys(state.entries).sort()[0] || null;
+const isFutureEmpty = (d) => !d.valid && d.type === 'work' && (d.date > todayIso() || !accStart() || d.date < accStart());
+const typeTag = (d) => (d.type !== 'work' ? `<span class="tag">${DAY_TYPES[d.type]}</span>` : '');
+const holTag = (d) => (d.holiday ? `<span class="hol">${esc(d.holiday)}</span>` : '');
 
 function sumBox(k, v, s = '', cls = '') {
   return `<div class="sum"><div class="k">${k}</div><div class="v ${cls}">${v}</div>${s ? `<div class="s">${s}</div>` : ''}</div>`;
@@ -103,6 +111,7 @@ async function loadProfiles() {
   }
   const activeId = await store.getMeta('activeProfile');
   state.profile = state.profiles.find((p) => p.id === activeId) || state.profiles[0];
+  for (const p of state.profiles) if (!p.surcharges) p.surcharges = defaultSurcharges();
   await loadEntries();
 }
 
@@ -113,7 +122,7 @@ async function loadEntries() {
 }
 
 async function saveEntry(date, data) {
-  const empty = !data.start && !data.end;
+  const empty = !data.start && !data.end && (!data.type || data.type === 'work');
   if (empty) {
     delete state.entries[date];
     await store.del('entries', `${state.profile.id}|${date}`);
@@ -147,6 +156,7 @@ function selectTab(name, { focus = false, scroll = false, hash = true } = {}) {
   if (name === 'monat') renderMonth();
   if (name === 'feierabend') renderQuit();
   if (name === 'addieren') renderAddRows();
+  if (name === 'lohn') computeSalary();
   if (scroll) $('calc').scrollIntoView({ block: 'start' });
   $(`tab-${name}`).scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
@@ -169,6 +179,7 @@ function bindTabs() {
   window.addEventListener('hashchange', () => {
     const h = location.hash.slice(1);
     if (TABS.includes(h)) selectTab(h, { scroll: true, hash: false });
+    else if (h.startsWith('teilen=')) showShared();
   });
 }
 
@@ -205,14 +216,18 @@ function readBreaks() {
 function readDay() {
   const s = parseTime($('d-start').value);
   const e = parseTime($('d-end').value);
+  const type = $('d-type').value || 'work';
+  if (type !== 'work') return { start: '', end: '', breaks: [], type };
   return {
     start: s === null ? $('d-start').value.trim() : formatClock(s),
     end: e === null ? $('d-end').value.trim() : (e === 1440 ? '24:00' : formatClock(e)),
     breaks: readBreaks().filter((b) => (b.kind === 'min' ? b.minutes : b.from || b.to)),
+    type,
   };
 }
 
 function writeDay(entry) {
+  $('d-type').value = entry?.type || 'work';
   $('d-start').value = entry?.start || '';
   $('d-end').value = entry?.end || '';
   $('d-start').removeAttribute('aria-invalid');
@@ -230,34 +245,62 @@ function updateSaveState() {
   $('d-clear').hidden = !saved;
   const prev = state.entries[addDays(state.day, -1)];
   $('d-copy-prev').hidden = !prev;
-  if (prev) $('d-copy-prev').textContent = `Gestern kopieren (${prev.start}–${prev.end})`;
+  if (prev) $('d-copy-prev').textContent = prev.type && prev.type !== 'work' ? `Gestern kopieren (${DAY_TYPES[prev.type]})` : `Gestern kopieren (${prev.start}–${prev.end})`;
 }
 
+let stampTimer = null;
 function computeDay() {
   const d = readDay();
-  const r = calcDay({ ...d, ...opts(), date: state.day });
   const p = state.profile;
-  $('r-hm').textContent = r.valid ? formatHM(r.net) : '–:––';
-  $('r-dec').textContent = r.valid ? formatDecimal(r.net) : '–';
+  const type = d.type || 'work';
+  const isToday = state.day === todayIso();
+  $('tag').classList.toggle('nonwork', type !== 'work');
+  // Stempeluhr: Beginn ohne Ende am heutigen Tag = Schicht läuft
+  const running = type === 'work' && isToday && parseTime(d.start) !== null && !d.end;
+  const calcIn = running ? { ...d, end: formatClock(nowMin()) } : d;
+  const info = dayInfo(state.day, calcIn, p);
+  const r = type === 'work' ? calcDay({ ...calcIn, ...opts(), date: state.day }) : { valid: false, warnings: [], breakTotal: 0, deducted: 0 };
+  const shown = type === 'work' ? (r.valid ? r.net : null) : info.credit;
+  $('r-label').textContent = running ? 'Arbeitszeit bisher' : type === 'work' ? 'Arbeitszeit' : `${DAY_TYPES[type]}${info.credit ? ' – angerechnet' : ''}`;
+  $('r-hm').textContent = shown === null ? '–:––' : formatHM(shown);
+  $('r-dec').textContent = shown === null ? '–' : formatDecimal(shown);
   $('r-next').hidden = !r.nextDay;
   $('r-gross').textContent = r.valid ? `${formatHM(r.gross)} h` : '–';
   $('r-break').textContent = `${formatHM(r.breakTotal + r.deducted)} h`;
+  $('r-gross').parentElement.hidden = type !== 'work';
+  $('r-break').parentElement.hidden = type !== 'work';
   $('r-night-wrap').hidden = !(r.valid && r.night > 0);
   $('r-night-wrap').querySelector('dt').textContent = p.bakery ? 'Nachtarbeit (22–5 Uhr)' : 'Nachtarbeit (23–6 Uhr)';
-  $('r-night').textContent = `${formatHM(r.night)} h`;
-  const showPay = r.valid && p.wage > 0;
+  $('r-night').textContent = `${formatHM(r.night || 0)} h`;
+  const sur = r.valid && info.surcharge ? info.surcharge.cents : 0;
+  const showPay = shown !== null && shown > 0 && p.wage > 0;
   $('r-pay-wrap').hidden = !showPay;
-  if (showPay) $('r-pay').textContent = formatEuro(wageCents(r.net, p.wage));
-  const soll = isWorkday(state.day) ? dailyTarget(p) : 0;
-  $('r-diff-wrap').hidden = !r.valid;
-  $('r-diff').textContent = `${formatHM(r.net - soll, { sign: true })} h`;
-  $('r-diff').className = signCls(r.net - soll);
+  if (showPay) $('r-pay').textContent = formatEuro(wageCents(shown, p.wage) + sur);
+  $('r-sur-wrap').hidden = !(showPay && sur > 0);
+  $('r-sur').textContent = formatEuro(sur);
+  const hasDiff = type === 'work' ? r.valid && !running : true;
+  $('r-diff-wrap').hidden = !hasDiff;
+  $('r-diff').textContent = `${formatHM(info.diff, { sign: true })} h`;
+  $('r-diff').className = signCls(info.diff);
+
+  const st = $('d-stamp');
+  const todays = state.entries[todayIso()];
+  const clockedIn = !!(todays && (!todays.type || todays.type === 'work') && todays.start && !todays.end);
+  st.textContent = clockedIn ? `Eingestempelt seit ${todays.start} Uhr` : 'Stempeluhr: speichert die aktuelle Uhrzeit';
+  st.classList.toggle('run', clockedIn);
+  $('d-in').classList.toggle('on', clockedIn);
+  clearInterval(stampTimer);
+  if (running) stampTimer = setInterval(() => { if (state.tab === 'tag' && document.activeElement?.tagName !== 'INPUT') computeDay(); }, 30000);
 
   const notes = [...r.warnings];
+  if (info.holiday) notes.push({ level: 'info', code: 'holiday', text: `Gesetzlicher Feiertag: ${info.holiday}. Das Soll für diesen Tag entfällt.` });
+  if (type === 'urlaub' || type === 'krank') notes.push({ level: 'info', code: 'credit', text: info.credit ? `${DAY_TYPES[type]}: Deine tägliche Sollzeit von ${formatHM(info.credit)} h wird gutgeschrieben.` : `${DAY_TYPES[type]}: An diesem Tag hast du kein Soll – es wird nichts gutgeschrieben.` });
+  if (type === 'ausgleich') notes.push({ level: 'info', code: 'comp', text: 'Überstundenabbau: Der Tag zählt mit 0 Stunden und verringert dein Überstundenkonto um die Sollzeit.' });
+  if (running) notes.push({ level: 'info', code: 'run', text: `Die Schicht läuft seit ${d.start} Uhr. Tippe auf „Gehen“, wenn du Feierabend machst.` });
   if (r.valid) {
     const neighbours = [addDays(state.day, -1), addDays(state.day, 1)]
       .map((date) => state.entries[date] && { ...state.entries[date], date }).filter(Boolean);
-    const rest = restViolations([{ ...d, date: state.day }, ...neighbours], p.minor);
+    const rest = restViolations([{ ...calcIn, date: state.day }, ...neighbours], p.minor);
     for (const v of rest) {
       const other = v.date === state.day ? v.prevDate : v.date;
       notes.push({ level: 'warn', code: 'rest', text: `${v.text} – zur Schicht am ${fmtDate(other, { weekday: 'short', day: '2-digit', month: '2-digit' })}.` });
@@ -265,19 +308,24 @@ function computeDay() {
     if (p.wage > 0 && belowMinWage(p.wage, state.day)) {
       notes.push({ level: 'warn', code: 'minwage', text: `Dein Stundenlohn liegt unter dem gesetzlichen Mindestlohn von ${formatEuro(Math.round(minWageAt(state.day) * 100))} pro Stunde.` });
     }
+    if (p.surcharges?.enabled && !(p.wage > 0)) notes.push({ level: 'info', code: 'surwage', text: 'Für Zuschläge bitte in den Einstellungen einen Stundenlohn eintragen.' });
   }
   const hasProblem = notes.some((n) => n.level === 'warn' || n.level === 'error');
   let html = noteHtml(notes);
-  if (r.valid && !hasProblem && r.net > 0) html = `<li class="note ok">Pausen und Höchstarbeitszeit nach Arbeitszeitgesetz eingehalten.</li>${html}`;
-  if (!r.valid) html = '<li class="note info">Gib Beginn und Ende ein, zum Beispiel 8 und 1630.</li>';
+  if (r.valid && !running && !hasProblem && r.net > 0) html = `<li class="note ok">Pausen und Höchstarbeitszeit nach Arbeitszeitgesetz eingehalten.</li>${html}`;
+  if (type === 'work' && !r.valid) html = `<li class="note info">Gib Beginn und Ende ein, zum Beispiel 8 und 1630.</li>${noteHtml(notes.filter((n) => n.code === 'holiday'))}`;
   $('r-notes').innerHTML = html;
   return { d, r };
 }
 
 const saveDaySoon = debounce(async () => {
   const d = readDay();
-  const valid = parseTime(d.start) !== null && parseTime(d.end) !== null;
-  if (!valid && (d.start || d.end)) return; // unvollständig – noch nicht speichern
+  if (d.type === 'work') {
+    const okStart = parseTime(d.start) !== null;
+    const okEnd = parseTime(d.end) !== null;
+    // unvollständig – noch nicht speichern (nur Beginn ist erlaubt: Stempeluhr)
+    if ((d.start && !okStart) || (d.end && !okEnd) || (!d.start && d.end)) return;
+  }
   await saveEntry(state.day, d);
   updateSaveState();
 }, 400);
@@ -337,8 +385,34 @@ function bindDay() {
     const next = list[list.indexOf(e.target) + 1];
     if (next) next.focus(); else e.target.blur();
   });
-  $('d-now').addEventListener('click', () => {
-    $('d-end').value = formatClock(nowMin());
+  $('d-in').addEventListener('click', async () => {
+    const t = todayIso();
+    const cur = state.entries[t];
+    if (cur && (cur.end || (cur.type && cur.type !== 'work'))) {
+      if (state.day !== t) loadDay(t);
+      return toast('Für heute gibt es schon einen Eintrag.');
+    }
+    if (cur && cur.start) { if (state.day !== t) loadDay(t); return toast(`Du bist seit ${cur.start} Uhr eingestempelt.`); }
+    state.dayTouched = true;
+    await saveEntry(t, { start: formatClock(nowMin()), end: '', breaks: [], type: 'work' });
+    loadDay(t);
+    toast(`Kommen gespeichert: ${state.entries[t].start} Uhr`);
+  });
+  $('d-out').addEventListener('click', async () => {
+    const t = todayIso();
+    let cur = state.entries[t];
+    // Nachtschicht: gestern eingestempelt und noch offen
+    let date = t;
+    const y = addDays(t, -1);
+    if (!(cur && cur.start && !cur.end) && state.entries[y] && state.entries[y].start && !state.entries[y].end) { cur = state.entries[y]; date = y; }
+    if (!cur || !cur.start || (cur.type && cur.type !== 'work')) return toast('Bitte zuerst „Kommen“ tippen oder den Beginn eintragen.');
+    state.dayTouched = true;
+    const end = formatClock(nowMin());
+    await saveEntry(date, { start: cur.start, end, breaks: cur.breaks || [], type: 'work' });
+    loadDay(date);
+    toast(`Gehen gespeichert: ${end} Uhr`);
+  });
+  $('d-type').addEventListener('change', () => {
     state.dayTouched = true;
     onDayInput();
   });
@@ -412,11 +486,14 @@ function renderWeek() {
     const wd = parseIso(d.date).getDay();
     const simple = isSimpleBreaks(e?.breaks);
     const pause = e ? breakSum(e.breaks) : '';
-    return `<tr class="day-row${wd === 0 || wd === 6 ? ' weekend' : ''}${d.date === todayIso() ? ' today' : ''}" data-date="${d.date}">
-      <td class="day"><button type="button" class="btn-link w-open" data-date="${d.date}" aria-label="${WEEKDAYS[wd]} ${fmtDate(d.date, { day: '2-digit', month: '2-digit' })} im Tagesrechner öffnen">${WEEKDAYS_SHORT[wd]} ${fmtDate(d.date, { day: '2-digit', month: '2-digit' })}</button> <span class="netm" data-netm></span></td>
-      <td data-l="Beginn"><input class="in in-time" data-f="start" type="text" inputmode="numeric" autocomplete="off" value="${esc(e?.start || '')}" aria-label="${WEEKDAYS[wd]} Beginn"></td>
+    const cells = d.type !== 'work'
+      ? `<td class="wtype" colspan="3">${typeTag(d)}</td>`
+      : `<td data-l="Beginn"><input class="in in-time" data-f="start" type="text" inputmode="numeric" autocomplete="off" value="${esc(e?.start || '')}" aria-label="${WEEKDAYS[wd]} Beginn"></td>
       <td data-l="Ende"><input class="in in-time" data-f="end" type="text" inputmode="numeric" autocomplete="off" value="${esc(e?.end || '')}" aria-label="${WEEKDAYS[wd]} Ende"></td>
-      <td data-l="Pause"><input class="in in-num" data-f="pause" type="text" inputmode="numeric" autocomplete="off" value="${pause === 0 ? '0' : pause}" ${simple ? '' : `readonly title="Mehrere Pausen – im Tagesrechner bearbeiten"`} aria-label="${WEEKDAYS[wd]} Pause in Minuten"></td>
+      <td data-l="Pause"><input class="in in-num" data-f="pause" type="text" inputmode="numeric" autocomplete="off" value="${pause === 0 ? '0' : pause}" ${simple ? '' : `readonly title="Mehrere Pausen – im Tagesrechner bearbeiten"`} aria-label="${WEEKDAYS[wd]} Pause in Minuten"></td>`;
+    return `<tr class="day-row${wd === 0 || wd === 6 ? ' weekend' : ''}${d.date === todayIso() ? ' today' : ''}" data-date="${d.date}">
+      <td class="day"><button type="button" class="btn-link w-open" data-date="${d.date}" aria-label="${WEEKDAYS[wd]} ${fmtDate(d.date, { day: '2-digit', month: '2-digit' })} im Tagesrechner öffnen">${WEEKDAYS_SHORT[wd]} ${fmtDate(d.date, { day: '2-digit', month: '2-digit' })}</button> <span class="netm" data-netm></span>${holTag(d)}</td>
+      ${cells}
       <td class="num net" data-net></td>
       <td class="num diff" data-diff></td>
     </tr><tr class="rowwarn" data-warn="${d.date}" hidden><td colspan="6"><ul class="notes"></ul></td></tr>`;
@@ -433,11 +510,12 @@ function updateWeekComputed() {
   for (const d of w.days) {
     const tr = $('w-body').querySelector(`tr[data-date="${d.date}"]`);
     if (!tr) continue;
-    const valid = d.result?.valid;
-    tr.querySelector('[data-net]').textContent = valid ? `${formatHM(d.net)} h` : '–';
-    tr.querySelector('[data-netm]').textContent = valid ? `· ${formatHM(d.net)} h` : '';
+    const valid = d.valid;
+    const has = valid || d.credit > 0;
+    tr.querySelector('[data-net]').textContent = has ? `${formatHM(d.net + d.credit)} h` : '–';
+    tr.querySelector('[data-netm]').textContent = has ? `· ${formatHM(d.net + d.credit)} h` : '';
     const diffEl = tr.querySelector('[data-diff]');
-    const show = (valid || d.soll > 0) && !isFutureEmpty(d);
+    const show = (valid || d.soll > 0 || d.type !== 'work') && !isFutureEmpty(d);
     diffEl.textContent = show ? formatHM(d.diff, { sign: true }) : '';
     diffEl.className = `num diff ${signCls(d.diff)}`;
     const notes = (valid ? d.result.warnings.filter((x) => x.level !== 'info' || x.code === 'max') : [])
@@ -448,10 +526,10 @@ function updateWeekComputed() {
   }
   const p = state.profile;
   const wToDate = saldoToDate(w.days);
-  let html = sumBox('Ist', `${formatHM(w.total)} h`, `${formatDecimal(w.total)} h dezimal`)
-    + sumBox('Soll', `${formatHM(w.soll)} h`, `${p.workdays.length} Arbeitstage`)
+  let html = sumBox('Ist', `${formatHM(w.total + w.credit)} h`, w.credit ? `davon ${formatHM(w.credit)} h Urlaub/Krank` : `${formatDecimal(w.total)} h dezimal`)
+    + sumBox('Soll', `${formatHM(w.soll)} h`, `${w.days.filter((d) => d.soll > 0).length} Arbeitstage`)
     + sumBox('Saldo', `${formatHM(w.saldo, { sign: true })} h`, wToDate !== null ? `bis heute: ${formatHM(wToDate, { sign: true })} h` : (w.saldo > 0 ? 'Überstunden' : w.saldo < 0 ? 'Minusstunden' : 'ausgeglichen'), signCls(w.saldo));
-  html += p.wage > 0 ? sumBox('Brutto', formatEuro(w.pay), `${formatEuro(Math.round(p.wage * 100))}/h`) : sumBox('Nachtarbeit', `${formatHM(w.night)} h`, p.bakery ? '22–5 Uhr' : '23–6 Uhr');
+  html += p.wage > 0 ? sumBox('Brutto', formatEuro(w.pay), w.surchargeCents ? `inkl. ${formatEuro(w.surchargeCents)} Zuschläge` : `${formatEuro(Math.round(p.wage * 100))}/h`) : sumBox('Nachtarbeit', `${formatHM(w.night)} h`, p.bakery ? '22–5 Uhr' : '23–6 Uhr');
   $('w-sum').innerHTML = html;
   const notes = [];
   if (!p.minor && w.total > 48 * 60) notes.push({ level: 'info', text: 'Mehr als 48 Stunden in dieser Woche: Das ist nur zulässig, wenn du im Schnitt von 6 Monaten auf höchstens 48 Stunden pro Woche kommst.' });
@@ -468,6 +546,7 @@ function saveWeekRow(date) {
 async function saveWeekRowNow(date) {
   const tr = $('w-body').querySelector(`tr[data-date="${date}"]`);
   if (!tr) return;
+  if (!tr.querySelector('[data-f="start"]')) return;
   const val = (f) => tr.querySelector(`[data-f="${f}"]`).value.trim();
   const s = parseTime(val('start'));
   const e = parseTime(val('end'));
@@ -476,7 +555,7 @@ async function saveWeekRowNow(date) {
   const breaks = isSimpleBreaks(old?.breaks)
     ? (() => { const m = parseMinutes(val('pause')); return m ? [{ kind: 'min', minutes: m }] : []; })()
     : old.breaks;
-  await saveEntry(date, { start: s === null ? '' : formatClock(s), end: e === null ? '' : (e === 1440 ? '24:00' : formatClock(e)), breaks });
+  await saveEntry(date, { start: s === null ? '' : formatClock(s), end: e === null ? '' : (e === 1440 ? '24:00' : formatClock(e)), breaks, type: 'work' });
   updateWeekComputed();
   if (date === state.day) loadDay(date);
 }
@@ -500,6 +579,19 @@ function bindWeek() {
     const b = e.target.closest('.w-open');
     if (b) openDay(b.dataset.date);
   });
+  $('w-fill').addEventListener('click', async () => {
+    const w = weekSummary(state.entries, state.week, state.profile);
+    const src = w.days.find((d) => d.valid);
+    if (!src) return toast('Trage zuerst einen Tag mit Beginn und Ende ein.');
+    const targets = w.days.filter((d) => !d.entry && d.soll > 0);
+    if (!targets.length) return toast('Alle Arbeitstage dieser Woche sind schon ausgefüllt.');
+    for (const d of targets) {
+      await saveEntry(d.date, { start: src.entry.start, end: src.entry.end, breaks: JSON.parse(JSON.stringify(src.entry.breaks || [])), type: 'work' });
+    }
+    renderWeek();
+    if (targets.some((d) => d.date === state.day)) loadDay(state.day);
+    toast(`${targets.length} Tag${targets.length > 1 ? 'e' : ''} mit ${src.entry.start}–${src.entry.end} ausgefüllt`);
+  });
 }
 
 function openDay(date) {
@@ -522,11 +614,16 @@ function renderMonth() {
   const p = state.profile;
   $('m-title').innerHTML = `${MONTHS[m - 1]} ${y}<small>${esc(p.name)}</small>`;
   const mToDate = saldoToDate(s.days);
-  let html = sumBox('Ist', `${formatHM(s.total)} h`, `${formatDecimal(s.total)} h dezimal`)
+  const lastIso = s.days[s.days.length - 1].date;
+  const acc = accountBalance(state.entries, p, lastIso < todayIso() ? lastIso : todayIso());
+  const absent = [s.count.urlaub && 'Urlaub', s.count.krank && 'Krank'].filter(Boolean).join('/');
+  let html = sumBox('Ist', `${formatHM(s.total + s.credit)} h`, s.credit ? `davon ${formatHM(s.credit)} h ${absent}` : `${formatDecimal(s.total)} h dezimal`)
     + sumBox('Soll', `${formatHM(s.soll)} h`, `${s.days.filter((d) => d.soll > 0).length} Arbeitstage`)
     + sumBox('Saldo', `${formatHM(s.saldo, { sign: true })} h`, mToDate !== null ? `bis heute: ${formatHM(mToDate, { sign: true })} h` : `${formatDecimal(s.saldo, { sign: true })} h dezimal`, signCls(s.saldo))
-    + sumBox('Überstunden', `${formatHM(s.overtime)} h`, `${s.workedDays} Tage gearbeitet`);
-  if (p.wage > 0) html += sumBox('Brutto', formatEuro(s.pay), `${formatEuro(Math.round(p.wage * 100))}/h`);
+    + (acc.start && acc.start <= lastIso
+      ? sumBox('Überstundenkonto', `${formatHM(acc.balance, { sign: true })} h`, `Stand ${fmtDate(lastIso < todayIso() ? lastIso : todayIso(), { day: '2-digit', month: '2-digit' })}, seit ${fmtDate(acc.start, { day: '2-digit', month: '2-digit', year: '2-digit' })}`, signCls(acc.balance))
+      : sumBox('Überstunden', `${formatHM(s.overtime)} h`, `${s.workedDays} Tage gearbeitet`));
+  if (p.wage > 0) html += sumBox('Brutto', formatEuro(s.pay), s.surchargeCents ? `inkl. ${formatEuro(s.surchargeCents)} Zuschläge` : `${formatEuro(Math.round(p.wage * 100))}/h`);
   if (s.night > 0) html += sumBox('Nachtarbeit', `${formatHM(s.night)} h`, p.bakery ? '22–5 Uhr' : '23–6 Uhr');
   $('m-sum').innerHTML = html;
 
@@ -537,21 +634,27 @@ function renderMonth() {
   const lack = s.days.filter((d) => d.result?.missing > 0).length;
   if (lack) notes.push({ level: 'warn', text: `An ${lack} Tag${lack > 1 ? 'en' : ''} fehlt Pflichtpause.` });
   if (p.wage > 0 && belowMinWage(p.wage, `${y}-${String(m).padStart(2, '0')}-01`)) notes.push({ level: 'warn', text: `Dein Stundenlohn liegt unter dem Mindestlohn von ${formatEuro(Math.round(minWageAt(`${y}-${String(m).padStart(2, '0')}-01`) * 100))}.` });
-  if (s.overMinijob) notes.push({ level: 'info', text: `Dein Monatsbrutto liegt über der Minijob-Grenze von ${formatEuro(s.minijobLimit * 100)}.` });
+  if (!p.minijob) { /* Minijob-Check nur, wenn in den Einstellungen aktiviert */ } else if (s.overMinijob) notes.push({ level: 'warn', text: `Minijob-Check: Dein Monatsbrutto von ${formatEuro(s.pay)} liegt über der Minijob-Grenze von ${formatEuro(s.minijobLimit * 100)}.` });
+  else if (p.wage > 0 && s.pay > 0) notes.push({ level: 'info', text: `Minijob-Check: Bis zur Grenze von ${formatEuro(s.minijobLimit * 100)} bleiben dir noch ${formatEuro(s.minijobLimit * 100 - s.pay)}.` });
+  const nEntries = Object.keys(state.entries).length;
+  if (nEntries >= 10 && (!state.lastBackup || Date.now() - state.lastBackup > 30 * 864e5)) notes.push({ level: 'info', text: 'Tipp: Sichere deine Einträge gelegentlich über „Datensicherung“ weiter unten – oder installiere den Rechner als App, dann bleiben sie dauerhaft erhalten.' });
   $('m-notes').innerHTML = noteHtml(notes);
 
   $('m-list').innerHTML = s.days.map((d) => {
     const wd = parseIso(d.date).getDay();
     const e = d.entry;
-    const valid = d.result?.valid;
+    const valid = d.valid;
     const warn = valid && (d.result.missing > 0 || d.result.warnings.some((w) => w.code === 'max') || s.rest.some((v) => v.date === d.date));
     const future = isFutureEmpty(d);
-    const times = valid ? `${e.start}–${e.end}${d.result.nextDay ? ' (+1)' : ''} · ${d.result.breakTotal} Min. Pause` : (d.soll > 0 && !future ? 'kein Eintrag' : '');
+    const hol = d.holiday ? `<span class="tag h">${esc(d.holiday)}</span> ` : '';
+    const times = hol + (valid ? `${e.start}–${e.end}${d.result.nextDay ? ' (+1)' : ''} · ${d.result.breakTotal} Min. Pause`
+      : d.type !== 'work' ? typeTag(d)
+        : e && e.start && !e.end ? `${e.start}– läuft` : (d.soll > 0 && !future ? 'kein Eintrag' : ''));
     return `<li class="${wd === 0 || wd === 6 ? 'we' : ''}${d.date === todayIso() ? ' today' : ''}"><button type="button" data-date="${d.date}" aria-label="${WEEKDAYS[wd]} ${fmtDate(d.date, { day: '2-digit', month: '2-digit' })} öffnen">
       <span class="md">${WEEKDAYS_SHORT[wd]} ${fmtDate(d.date, { day: '2-digit', month: '2-digit' })}</span>
       <span class="mt">${times}</span>
-      <span class="mn${warn ? ' warn-dot' : ''}">${valid ? `${formatHM(d.net)} h` : ''}</span>
-      <span class="mx ${signCls(d.diff)}">${(valid || d.soll) && !future ? formatHM(d.diff, { sign: true }) : ''}</span>
+      <span class="mn${warn ? ' warn-dot' : ''}">${valid || d.credit ? `${formatHM(d.net + d.credit)} h` : ''}</span>
+      <span class="mx ${signCls(d.diff)}">${(valid || d.soll || d.type === 'ausgleich') && !future ? formatHM(d.diff, { sign: true }) : ''}</span>
     </button></li>`;
   }).join('');
 }
@@ -585,6 +688,9 @@ function bindMonth() {
   $('b-export').addEventListener('click', async () => {
     const data = await store.exportAll();
     download(`arbeitszeit-backup-${todayIso()}.json`, new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' }));
+    state.lastBackup = Date.now();
+    store.setMeta('lastBackup', state.lastBackup);
+    renderMonth();
   });
   $('b-import').addEventListener('change', async (e) => {
     const file = e.target.files[0];
@@ -601,6 +707,19 @@ function bindMonth() {
     }
     e.target.value = '';
   });
+  $('m-share').addEventListener('click', async () => {
+    const [y, m] = state.month;
+    const prefix = `${y}-${String(m).padStart(2, '0')}-`;
+    if (!Object.keys(state.entries).some((d) => d.startsWith(prefix))) return toast('In diesem Monat gibt es noch keine Einträge.');
+    const url = `${location.origin}/#teilen=${encodeShare(state.entries, state.profile, y, m)}`;
+    try {
+      if (navigator.share) await navigator.share({ title: `Arbeitszeit ${MONTHS[m - 1]} ${y}`, url });
+      else { await navigator.clipboard.writeText(url); toast('Link kopiert'); }
+    } catch (err) {
+      if (err && err.name === 'AbortError') return;
+      try { await navigator.clipboard.writeText(url); toast('Link kopiert'); } catch { toast('Der Link konnte nicht kopiert werden.'); }
+    }
+  });
   $('tpl-download').addEventListener('click', async () => {
     const ex = await import('./export.js');
     const { name, blob } = ex.excelTemplate(new Date().getFullYear(), new Date().getMonth() + 1);
@@ -616,24 +735,25 @@ function exportPayload() {
     year: y, month: m, title: `${MONTHS[m - 1]} ${y}`, profile: p.name, wage: p.wage || 0,
     rows: s.days.map((d) => {
       const wd = parseIso(d.date).getDay();
-      const valid = d.result?.valid;
+      const valid = d.valid;
+      const note = [d.type !== 'work' ? DAY_TYPES[d.type] : '', d.holiday || ''].filter(Boolean).join(', ');
       return {
         date: d.date, dateDe: fmtDate(d.date, { day: '2-digit', month: '2-digit', year: 'numeric' }), weekday: WEEKDAYS_SHORT[wd],
         start: valid ? d.entry.start : '', end: valid ? d.entry.end : '', breakMin: valid ? d.result.breakTotal + d.result.deducted : '',
-        net: valid ? d.net : null, soll: d.soll, diff: d.diff, night: valid ? d.result.night : 0, nextDay: valid && d.result.nextDay,
+        net: valid ? d.net : (d.credit ? d.credit : null), soll: d.soll, diff: d.diff, night: valid ? d.result.night : 0, nextDay: valid && d.result.nextDay, note,
       };
     }),
-    total: s.total, soll: s.soll, saldo: s.saldo, overtime: s.overtime, pay: s.pay, night: s.night,
+    total: s.total + s.credit, soll: s.soll, saldo: s.saldo, overtime: s.overtime, pay: s.pay, night: s.night, surcharge: s.surchargeCents,
   };
 }
 
 function printMonth(data) {
   const area = $('print-area');
   area.innerHTML = `<h1>Stundenzettel ${esc(data.title)}</h1><p>${esc(data.profile)} · Name: ________________________</p>
-    <table><thead><tr><th>Datum</th><th>Tag</th><th>Beginn</th><th>Ende</th><th>Pause</th><th>Arbeitszeit</th><th>Dezimal</th><th>+/−</th></tr></thead><tbody>
-    ${data.rows.map((r) => `<tr><td>${r.dateDe}</td><td>${r.weekday}</td><td>${r.start}</td><td>${r.end}${r.nextDay ? ' (+1)' : ''}</td><td>${r.breakMin === '' ? '' : `${r.breakMin} Min.`}</td><td>${r.net === null ? '' : formatHM(r.net)}</td><td>${r.net === null ? '' : formatDecimal(r.net)}</td><td>${r.net === null && !r.soll ? '' : formatHM(r.diff, { sign: true })}</td></tr>`).join('')}
+    <table><thead><tr><th>Datum</th><th>Tag</th><th>Beginn</th><th>Ende</th><th>Pause</th><th>Arbeitszeit</th><th>Dezimal</th><th>+/−</th><th>Bemerkung</th></tr></thead><tbody>
+    ${data.rows.map((r) => `<tr><td>${r.dateDe}</td><td>${r.weekday}</td><td>${r.start}</td><td>${r.end}${r.nextDay ? ' (+1)' : ''}</td><td>${r.breakMin === '' ? '' : `${r.breakMin} Min.`}</td><td>${r.net === null ? '' : formatHM(r.net)}</td><td>${r.net === null ? '' : formatDecimal(r.net)}</td><td>${r.net === null && !r.soll ? '' : formatHM(r.diff, { sign: true })}</td><td>${esc(r.note)}</td></tr>`).join('')}
     </tbody></table>
-    <p><strong>Summe: ${formatHM(data.total)} h (${formatDecimal(data.total)} h)</strong> · Soll ${formatHM(data.soll)} h · Saldo ${formatHM(data.saldo, { sign: true })} h${data.wage ? ` · Brutto ${formatEuro(data.pay)}` : ''}</p>
+    <p><strong>Summe: ${formatHM(data.total)} h (${formatDecimal(data.total)} h)</strong> · Soll ${formatHM(data.soll)} h · Saldo ${formatHM(data.saldo, { sign: true })} h${data.wage ? ` · Brutto ${formatEuro(data.pay)}${data.surcharge ? ` (inkl. ${formatEuro(data.surcharge)} Zuschläge)` : ''}` : ''}</p>
     <div class="sig"><div>Datum, Unterschrift Arbeitnehmer/in</div><div>Datum, Unterschrift Arbeitgeber/in</div></div>
     <p style="font-size:8pt;color:#555">Erstellt mit derarbeitszeitrechner.de</p>`;
   document.body.classList.add('printing');
@@ -750,6 +870,13 @@ function renderSettings() {
   $('p-minor').checked = !!p.minor;
   $('p-auto').checked = !!p.autoDeduct;
   $('p-bakery').checked = !!p.bakery;
+  $('p-minijob').checked = !!p.minijob;
+  $('p-state').innerHTML = `<option value="">Nur bundesweite Feiertage</option>${Object.entries(STATES).map(([k, v]) => `<option value="${k}"${p.state === k ? ' selected' : ''}>${v}</option>`).join('')}`;
+  $('p-balance').value = p.startBalance ? formatHM(p.startBalance).replace('−', '-') : '';
+  const sc = p.surcharges;
+  $('p-sur').checked = !!sc.enabled;
+  $('p-sur-box').hidden = !sc.enabled;
+  for (const k of ['night', 'night04', 'sunday', 'holiday', 'special']) $(`p-sur-${k}`).value = String(sc[k]).replace('.', ',');
   $('p-days').innerHTML = [1, 2, 3, 4, 5, 6, 0].map((d) => `<label><input type="checkbox" value="${d}"${p.workdays.includes(d) ? ' checked' : ''} aria-label="${WEEKDAYS[d]}">${WEEKDAYS_SHORT[d]}</label>`).join('');
   $('p-delete').hidden = state.profiles.length < 2;
   $('p-delete').textContent = 'Diesen Job löschen';
@@ -783,6 +910,19 @@ function bindSettings() {
     } else if (id === 'p-minor') p.minor = e.target.checked;
     else if (id === 'p-auto') p.autoDeduct = e.target.checked;
     else if (id === 'p-bakery') p.bakery = e.target.checked;
+    else if (id === 'p-minijob') p.minijob = e.target.checked;
+    else if (id === 'p-state') p.state = e.target.value;
+    else if (id === 'p-balance') {
+      const v = e.target.value.trim();
+      const m = v === '' ? 0 : parseDuration(v);
+      if (m === null) return;
+      p.startBalance = m;
+    } else if (id === 'p-sur') { p.surcharges.enabled = e.target.checked; $('p-sur-box').hidden = !e.target.checked; }
+    else if (id.startsWith('p-sur-')) {
+      const n = num(e.target.value);
+      if (n === null || n < 0 || n > 500) return;
+      p.surcharges[id.slice(6)] = n;
+    }
     else if (e.target.closest('#p-days')) {
       p.workdays = [...$('p-days').querySelectorAll('input:checked')].map((x) => +x.value);
       $('f-target').value = formatHM(dailyTarget(p));
@@ -795,7 +935,7 @@ function bindSettings() {
   });
   $('p-new').addEventListener('click', async () => {
     const base = state.profile;
-    const p = { ...DEFAULT_PROFILE(), name: `Job ${state.profiles.length + 1}`, weeklyMinutes: base.weeklyMinutes, workdays: [...base.workdays] };
+    const p = { ...DEFAULT_PROFILE(), name: `Job ${state.profiles.length + 1}`, weeklyMinutes: base.weeklyMinutes, workdays: [...base.workdays], state: base.state || '' };
     state.profiles.push(p);
     await store.put('profiles', p);
     await switchProfile(p.id);
@@ -828,6 +968,108 @@ async function switchProfile(id) {
   refreshAll();
 }
 
+/* ---------- Lohn (Gehalt ↔ Stundenlohn) ---------- */
+
+const numDe = (v) => { const n = parseFloat(String(v).trim().replace(/\./g, '').replace(',', '.')); return Number.isFinite(n) ? n : null; };
+function numFlex(v) {
+  const t = String(v).trim();
+  // "3.000" oder "3.000,50" = Tausenderpunkt; "17.5" = Dezimalpunkt
+  if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(t)) return numDe(t);
+  const n = parseFloat(t.replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
+}
+function computeSalary() {
+  const sal = numFlex($('g-salary').value);
+  const hrs = numFlex($('g-hours').value);
+  const rate = salaryToHourly(sal, hrs);
+  $('g-rate').textContent = rate === null ? '–' : formatEuro(Math.round(rate * 100));
+  $('g-detail').textContent = rate === null ? 'Monatsgehalt und Wochenstunden eingeben' : `${formatEuro(Math.round(sal * 100))} × 3 ÷ 13 ÷ ${String(hrs).replace('.', ',')} Stunden`;
+  const notes = [];
+  if (rate !== null) {
+    const min = minWageAt(todayIso());
+    notes.push(rate < min
+      ? { level: 'warn', text: `Das liegt unter dem gesetzlichen Mindestlohn von ${formatEuro(Math.round(min * 100))} pro Stunde.` }
+      : { level: 'ok', text: `Über dem gesetzlichen Mindestlohn von ${formatEuro(Math.round(min * 100))} pro Stunde.` });
+  }
+  $('g-notes').innerHTML = noteHtml(notes);
+  $('g-apply').hidden = rate === null;
+  const back = hourlyToSalary(numFlex($('g-rate-in').value), hrs);
+  $('g-salary-out').textContent = back === null ? '–' : formatEuro(Math.round(back * 100));
+  return rate;
+}
+function bindSalary() {
+  $('lohn').addEventListener('input', computeSalary);
+  $('g-apply').addEventListener('click', async () => {
+    const rate = computeSalary();
+    if (rate === null) return;
+    state.profile.wage = rate;
+    await saveProfile();
+    renderSettings();
+    refreshAll();
+    toast(`Stundenlohn ${formatEuro(Math.round(rate * 100))} übernommen`);
+  });
+}
+
+/* ---------- Geteilter Monat (Daten nur im URL-Fragment) ---------- */
+
+function showShared() {
+  const m = location.hash.match(/^#teilen=([A-Za-z0-9_-]+)$/);
+  const box = $('shared');
+  if (!m) { box.hidden = true; return false; }
+  const data = decodeShare(m[1]);
+  if (!data) { box.hidden = true; toast('Der geteilte Link ist ungültig oder unvollständig.'); return false; }
+  const s = monthSummary(data.entries, data.year, data.month, data.profile);
+  const rows = s.days.filter((d) => d.entry).map((d) => {
+    const wd = parseIso(d.date).getDay();
+    return `<tr><td>${WEEKDAYS_SHORT[wd]} ${fmtDate(d.date, { day: '2-digit', month: '2-digit' })}</td><td>${d.valid ? `${esc(d.entry.start)}–${esc(d.entry.end)}` : esc(DAY_TYPES[d.type] || '')}</td><td>${d.valid ? `${d.result.breakTotal} Min.` : ''}</td><td><strong>${d.valid || d.credit ? formatHM(d.net + d.credit) : ''}</strong></td></tr>`;
+  }).join('');
+  box.innerHTML = `<h2>Geteilter Monat: ${MONTHS[data.month - 1]} ${data.year}</h2>
+    <p class="hint">${esc(data.profile.name)} · nur Ansicht – deine eigenen Daten bleiben unverändert.</p>
+    <div class="sum-grid">${sumBox('Ist', `${formatHM(s.total + s.credit)} h`, `${formatDecimal(s.total + s.credit)} h dezimal`)}${sumBox('Soll', `${formatHM(s.soll)} h`)}${sumBox('Saldo', `${formatHM(s.saldo, { sign: true })} h`, '', signCls(s.saldo))}${sumBox('Arbeitstage', String(s.workedDays))}</div>
+    <div class="table-wrap"><table><thead><tr><th scope="col">Tag</th><th scope="col">Zeit</th><th scope="col">Pause</th><th scope="col">Stunden</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="btn-row"><button type="button" class="btn" id="s-import">Als neuen Job übernehmen</button><button type="button" class="btn-ghost" id="s-close">Schließen</button></div>`;
+  box.hidden = false;
+  const close = () => { box.hidden = true; history.replaceState(null, '', location.pathname); };
+  $('s-close').addEventListener('click', close);
+  $('s-import').addEventListener('click', async () => {
+    const p = { ...DEFAULT_PROFILE(), ...data.profile, name: `${data.profile.name} (geteilt)` };
+    state.profiles.push(p);
+    await store.put('profiles', p);
+    for (const [date, e] of Object.entries(data.entries)) {
+      await store.put('entries', { key: `${p.id}|${date}`, profileId: p.id, date, start: e.start, end: e.end, breaks: e.breaks, type: e.type, updated: Date.now() });
+    }
+    await switchProfile(p.id);
+    state.month = [data.year, data.month];
+    close();
+    selectTab('monat', { scroll: true });
+    toast('Monat als neuer Job übernommen');
+  });
+  box.scrollIntoView({ block: 'start' });
+  return true;
+}
+
+/* ---------- App installieren / offline ---------- */
+
+function initPwa() {
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
+  let deferred = null;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferred = e;
+    $('install-box').hidden = false;
+  });
+  $('install').addEventListener('click', async () => {
+    if (!deferred) return;
+    deferred.prompt();
+    await deferred.userChoice.catch(() => {});
+    deferred = null;
+    $('install-box').hidden = true;
+  });
+  window.addEventListener('appinstalled', () => { $('install-box').hidden = true; });
+}
+
 /* ---------- Start ---------- */
 
 async function init() {
@@ -841,9 +1083,12 @@ async function init() {
   bindAdd();
   bindDec();
   bindSettings();
+  bindSalary();
+  initPwa();
   try {
     await loadProfiles();
     state.addRows = (await store.getMeta('addRows', [])) || [];
+    state.lastBackup = await store.getMeta('lastBackup', 0);
   } catch {
     state.profiles = [DEFAULT_PROFILE()];
     state.profile = state.profiles[0];
@@ -858,8 +1103,14 @@ async function init() {
   computeDay();
   updateSaveState();
   computeDec();
+  computeSalary();
+  $('g-hours').value = String((state.profile.weeklyMinutes ?? 2400) / 60).replace('.', ',');
+  computeSalary();
   const h = location.hash.slice(1);
   if (TABS.includes(h)) selectTab(h, { scroll: true, hash: false });
+  else showShared();
+  // Tageswechsel und Rückkehr in den Tab: Anzeige auffrischen
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && state.tab === 'tag' && document.activeElement?.tagName !== 'INPUT') computeDay(); });
 }
 
 init();

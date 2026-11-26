@@ -140,7 +140,7 @@ writeFileSync(join(out, 'datenschutz.html'), page({
 <p><strong>Kurz gesagt:</strong> Der Arbeitszeitrechner funktioniert vollständig in deinem Browser. Deine eingegebenen Arbeitszeiten, Pausen, Stundenlöhne und Profile werden ausschließlich lokal auf deinem Gerät gespeichert und nicht an uns oder Dritte übertragen. Es gibt kein Konto, keine Cookies und keine Werbung.</p>
 <h2>1. Verantwortlicher</h2><p>${addr}<br>E-Mail: ${mail}</p>
 <h2>2. Hosting und Server-Logfiles</h2><p>Diese Website wird über das Netzwerk der Cloudflare, Inc., 101 Townsend St., San Francisco, CA 94107, USA, ausgeliefert. Beim Aufruf der Website verarbeitet Cloudflare technisch notwendige Daten wie IP-Adresse, Zeitpunkt des Abrufs, aufgerufene Adresse, Browser-Typ und Betriebssystem, um die Seite auszuliefern und vor Angriffen zu schützen. Rechtsgrundlage ist unser berechtigtes Interesse an einer sicheren und schnellen Bereitstellung der Website (Art. 6 Abs. 1 lit. f DSGVO). Mit Cloudflare besteht ein Auftragsverarbeitungsvertrag. Cloudflare ist unter dem EU-US Data Privacy Framework zertifiziert; zusätzlich gelten die Standardvertragsklauseln der EU-Kommission. Weitere Informationen: <a href="https://www.cloudflare.com/de-de/privacypolicy/" rel="noopener">Datenschutzerklärung von Cloudflare</a>.</p>
-<h2>3. Lokale Speicherung im Browser</h2><p>Damit deine Einträge nach dem Neuladen erhalten bleiben, speichert der Rechner sie in der IndexedDB bzw. im lokalen Speicher deines Browsers. Diese Daten verlassen dein Gerät nicht und sind für uns nicht einsehbar. Die Speicherung ist für die von dir ausdrücklich gewünschte Funktion unbedingt erforderlich (§ 25 Abs. 2 Nr. 2 TDDDG). Du kannst die Daten jederzeit löschen, indem du Einträge im Rechner entfernst oder die Websitedaten in deinem Browser löschst. Über „Datensicherung“ kannst du sie selbst als Datei exportieren.</p>
+<h2>3. Lokale Speicherung im Browser</h2><p>Damit deine Einträge nach dem Neuladen erhalten bleiben, speichert der Rechner sie in der IndexedDB bzw. im lokalen Speicher deines Browsers. Diese Daten verlassen dein Gerät nicht und sind für uns nicht einsehbar. Die Speicherung ist für die von dir ausdrücklich gewünschte Funktion unbedingt erforderlich (§ 25 Abs. 2 Nr. 2 TDDDG). Damit der Rechner auch ohne Internetverbindung funktioniert, legt ein Service Worker die Dateien der Website im Cache deines Browsers ab; dabei werden keine personenbezogenen Daten gespeichert. Wenn du einen Monat über „Als Link teilen“ weitergibst, stehen die Zeiten im Teil der Adresse hinter dem #-Zeichen; dieser Teil wird von Browsern nicht an unseren Server übertragen. Du kannst die Daten jederzeit löschen, indem du Einträge im Rechner entfernst oder die Websitedaten in deinem Browser löschst. Über „Datensicherung“ kannst du sie selbst als Datei exportieren.</p>
 <h2>4. Cookies, Reichweitenmessung und Werbung</h2><p>Diese Website setzt keine Cookies, verwendet keine Tracking- oder Analysedienste und zeigt keine Werbung. Sollte sich das ändern, wird diese Datenschutzerklärung vorher angepasst und – soweit erforderlich – deine Einwilligung eingeholt.</p>
 <h2>5. Kontakt per E-Mail</h2><p>Wenn du uns per E-Mail kontaktierst, verarbeiten wir deine Angaben zur Bearbeitung der Anfrage (Art. 6 Abs. 1 lit. b bzw. f DSGVO) und löschen sie, sobald sie nicht mehr erforderlich sind.</p>
 <h2>6. Deine Rechte</h2><p>Du hast das Recht auf Auskunft (Art. 15 DSGVO), Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung der Verarbeitung (Art. 18), Datenübertragbarkeit (Art. 20) und Widerspruch (Art. 21 DSGVO). Außerdem kannst du dich bei einer Datenschutz-Aufsichtsbehörde beschweren, zum Beispiel bei der Landesbeauftragten für den Datenschutz und für das Recht auf Akteneinsicht Brandenburg.</p>
@@ -170,6 +170,36 @@ writeFileSync(join(out, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>
 <url><loc>${site.url}/datenschutz</loc></url>
 <url><loc>${site.url}/kontakt</loc></url>
 </urlset>
+`);
+
+/* ---------- Service Worker (offline) ---------- */
+const precache = ['/', ...jsFiles.map((f) => `${assetsPath}/${f}`), '/favicon.svg', '/icon-192.png', '/site.webmanifest'];
+writeFileSync(join(out, 'sw.js'), `// automatisch erzeugt von scripts/build.mjs
+const CACHE = 'azr-${version}-${createHash('sha256').update(index).digest('hex').slice(0, 8)}';
+const PRECACHE = ${JSON.stringify(precache)};
+self.addEventListener('install', (e) => {
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
+});
+self.addEventListener('activate', (e) => {
+  e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k.startsWith('azr-') && k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
+});
+self.addEventListener('fetch', (e) => {
+  const req = e.request;
+  const url = new URL(req.url);
+  if (req.method !== 'GET' || url.origin !== location.origin) return;
+  if (url.pathname.startsWith('/assets/')) {
+    e.respondWith(caches.match(req).then((hit) => hit || fetch(req).then((res) => {
+      if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }
+      return res;
+    })));
+    return;
+  }
+  // Seiten und übrige Dateien: zuerst Netz (immer aktuell), offline aus dem Cache
+  e.respondWith(fetch(req).then((res) => {
+    if (res.ok && res.type === 'basic') { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }
+    return res;
+  }).catch(() => caches.match(req, { ignoreSearch: req.mode === 'navigate' }).then((hit) => hit || (req.mode === 'navigate' ? caches.match('/') : Response.error()))));
+});
 `);
 
 if (missing.length) console.warn(`⚠ Impressum/Datenschutz: bitte in src/site.json ergänzen: ${[...new Set(missing)].join(', ')}`);

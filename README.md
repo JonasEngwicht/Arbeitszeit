@@ -32,6 +32,12 @@ Jeder Push auf `main` wird von Cloudflare (Workers Builds) automatisch deployt.
 `wrangler deploy` führt vorher `node scripts/build.mjs` aus (siehe `wrangler.jsonc`).
 Manuell: `npm run deploy`.
 
+## Funktionen über das MVP hinaus (Phase 2)
+
+Tagesarten (Urlaub, Krank, Feiertag, Überstundenabbau), Feiertage je Bundesland, Überstundenkonto mit Startsaldo,
+Zuschläge nach § 3b EStG, Gehalt ↔ Stundenlohn, Minijob-Check, Stempeluhr, Teilen-Link (Daten nur im URL-Fragment),
+PWA mit Service Worker (`public/sw.js` wird vom Build erzeugt). Alles im Rechenkern getestet (`npm test`).
+
 ## Jährliche Pflege
 
 - Neue Rechtswerte in `src/js/config.js` mit `from`-Datum anhängen (z. B. Mindestlohn).

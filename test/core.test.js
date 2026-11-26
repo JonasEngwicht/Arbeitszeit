@@ -162,3 +162,92 @@ test('Monat: echter Kalender (November 2026 = 21 Werktage Mo–Fr)', () => {
   assert.equal(m.days.length, 30);
   assert.equal(m.soll, 21 * 480);
 });
+
+/* ---------- Phase 2 ---------- */
+import {
+  holidays, holidayName, easterSunday, calcSurcharges, dayInfo, accountBalance,
+  salaryToHourly, hourlyToSalary, encodeShare, decodeShare,
+} from '../src/js/core.js';
+
+test('Feiertage: Ostern 2026/2027, Bundesländer', () => {
+  assert.equal(easterSunday(2026), '2026-04-05');
+  assert.equal(easterSunday(2027), '2027-03-28');
+  assert.equal(holidayName('2026-04-03'), 'Karfreitag');
+  assert.equal(holidayName('2026-05-14'), 'Christi Himmelfahrt');
+  assert.equal(holidayName('2026-05-25'), 'Pfingstmontag');
+  assert.equal(holidayName('2026-10-31', 'BB'), 'Reformationstag');
+  assert.equal(holidayName('2026-10-31', 'BY'), null);
+  assert.equal(holidayName('2026-06-04', 'BY'), 'Fronleichnam');
+  assert.equal(holidayName('2026-11-18', 'SN'), 'Buß- und Bettag');
+  assert.equal(Object.keys(holidays(2026, '')).length, 9);
+});
+
+test('Feiertag wird beim Soll abgezogen (Mai 2026: 21 Mo–Fr, 3 Feiertage)', () => {
+  const m = monthSummary({}, 2026, 5, { weeklyMinutes: 2400, workdays: [1, 2, 3, 4, 5] });
+  assert.equal(m.soll, 18 * 480);
+});
+
+test('Urlaub und Krank werden gutgeschrieben, Überstundenabbau nicht', () => {
+  const p = { weeklyMinutes: 2400, workdays: [1, 2, 3, 4, 5], wage: 20 };
+  assert.equal(dayInfo('2026-11-23', { type: 'urlaub' }, p).diff, 0);
+  assert.equal(dayInfo('2026-11-23', { type: 'krank' }, p).credit, 480);
+  assert.equal(dayInfo('2026-11-23', { type: 'ausgleich' }, p).diff, -480);
+  const w = weekSummary({ '2026-11-23': { type: 'urlaub' } }, '2026-11-23', p);
+  assert.equal(w.pay, 16000); // 8 h × 20 €
+  assert.equal(w.count.urlaub, 1);
+});
+
+test('Zuschläge: Nachtschicht Sa 22–6 → Nacht 25 %/40 %, Sonntag 50 %', () => {
+  const p = { wage: 20, surcharges: { enabled: true, night: 25, night04: 40, sunday: 50, holiday: 125, special: 150 } };
+  const r = calcDay({ start: '22:00', end: '06:00', breaks: [], date: '2026-11-21' }); // Samstag
+  const z = calcSurcharges(r, '2026-11-21', p);
+  assert.equal(z.night, 240); // 22–24 und 4–6 Uhr
+  assert.equal(z.night04, 240); // 0–4 Uhr
+  assert.equal(z.sunday, 360); // So 0–6 Uhr
+  // 4 h × 5 € + 4 h × 8 € + 6 h × 10 € = 112 €
+  assert.equal(z.cents, 11200);
+});
+
+test('Zuschläge: Feiertag 125 %, 1. Weihnachtstag 150 %, aus = 0', () => {
+  const sc = { enabled: true, night: 25, night04: 40, sunday: 50, holiday: 125, special: 150 };
+  const day = (date) => calcDay({ start: '08:00', end: '16:00', breaks: [], date });
+  assert.equal(calcSurcharges(day('2026-10-03'), '2026-10-03', { wage: 10, surcharges: sc }).cents, 10000);
+  assert.equal(calcSurcharges(day('2026-12-25'), '2026-12-25', { wage: 10, surcharges: sc }).cents, 12000);
+  assert.equal(calcSurcharges(day('2026-10-03'), '2026-10-03', { wage: 10, surcharges: { ...sc, enabled: false } }).cents, 0);
+});
+
+test('Überstundenkonto: Startsaldo + Tage ab erstem Eintrag', () => {
+  const p = { weeklyMinutes: 2400, workdays: [1, 2, 3, 4, 5], startBalance: 120 };
+  const entries = {
+    '2026-11-23': { start: '08:00', end: '17:30', breaks: pause(30) }, // +1:00
+    '2026-11-24': { start: '08:00', end: '16:30', breaks: pause(30) }, // 0
+  };
+  assert.equal(accountBalance(entries, p, '2026-11-24').balance, 180);
+  assert.equal(accountBalance(entries, p, '2026-11-25').balance, 180 - 480); // Mi ohne Eintrag
+  assert.equal(accountBalance({}, p, '2026-11-25').balance, 120);
+});
+
+test('Gehalt ↔ Stundenlohn', () => {
+  assert.equal(salaryToHourly(3000, 40), 17.31);
+  assert.equal(hourlyToSalary(15, 40), 2600);
+  assert.equal(salaryToHourly(0, 40), null);
+});
+
+test('Teilen-Link: hin und zurück, kaputte Daten → null', () => {
+  const p = { name: 'Büro Müller', weeklyMinutes: 2340, workdays: [1, 2, 3, 4, 5], state: 'BB', wage: 99 };
+  const entries = {
+    '2026-11-23': { start: '08:00', end: '16:30', breaks: [{ kind: 'range', from: '12:00', to: '12:30' }] },
+    '2026-11-24': { type: 'urlaub', start: '', end: '' },
+    '2026-10-01': { start: '08:00', end: '12:00', breaks: [] },
+  };
+  const code = encodeShare(entries, p, 2026, 11);
+  assert.match(code, /^[A-Za-z0-9_-]+$/);
+  const back = decodeShare(code);
+  assert.equal(back.profile.name, 'Büro Müller');
+  assert.equal(back.profile.wage, undefined);
+  assert.deepEqual(Object.keys(back.entries), ['2026-11-23', '2026-11-24']);
+  assert.equal(back.entries['2026-11-24'].type, 'urlaub');
+  assert.equal(monthSummary(back.entries, 2026, 11, back.profile).total, 480);
+  assert.equal(decodeShare('kaputt!!'), null);
+  assert.equal(decodeShare(''), null);
+});

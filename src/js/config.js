@@ -37,6 +37,17 @@ export const LAW = {
   night: { from: 23 * 60, to: 6 * 60 },
   nightBakery: { from: 22 * 60, to: 5 * 60 },
   weeksPerMonth: 4.33,
+  // Steuerfreie Höchstsätze für Zuschläge nach § 3b EStG (in Prozent vom Grundlohn)
+  surcharge: { night: 25, night04: 40, sunday: 50, holiday: 125, special: 150 },
+  // Nachtzeit für Zuschläge (§ 3b EStG) – weicht vom Arbeitszeitgesetz ab
+  surchargeNight: { from: 20 * 60, to: 6 * 60 },
+  surchargeMaxBase: 50, // Zuschlag steuerfrei nur bis 50 €/h Grundlohn
+};
+
+export const STATES = {
+  BW: 'Baden-Württemberg', BY: 'Bayern', BE: 'Berlin', BB: 'Brandenburg', HB: 'Bremen', HH: 'Hamburg',
+  HE: 'Hessen', MV: 'Mecklenburg-Vorpommern', NI: 'Niedersachsen', NW: 'Nordrhein-Westfalen',
+  RP: 'Rheinland-Pfalz', SL: 'Saarland', SN: 'Sachsen', ST: 'Sachsen-Anhalt', SH: 'Schleswig-Holstein', TH: 'Thüringen',
 };
 
 export function valueAt(list, isoDate) {
