@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arbeitszeitrechner &amp; Stundenrechner – mit Pause, kostenlos</title>
+<meta name="description" content="Arbeitszeit und Stunden berechnen: mit Pausen, Nachtschicht, Woche &amp; Monat, Dezimal und Lohn. Kostenlos, ohne Anmeldung, Export als Excel.">
+<link rel="canonical" href="{{URL}}/">
+<meta name="theme-color" content="#0b5cad" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1720" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="de_DE">
+<meta property="og:site_name" content="derarbeitszeitrechner.de">
+<meta property="og:title" content="Arbeitszeitrechner &amp; Stundenrechner – mit Pause, kostenlos">
+<meta property="og:description" content="Arbeitszeit mit Pausen, Nachtschicht, Woche, Monat, Dezimal und Lohn berechnen. Kostenlos, ohne Anmeldung.">
+<meta property="og:url" content="{{URL}}/">
+<meta property="og:image" content="{{URL}}/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="modulepreload" href="{{ASSETS}}/core.js">
+<link rel="modulepreload" href="{{ASSETS}}/config.js">
+<link rel="modulepreload" href="{{ASSETS}}/store.js">
+<style>{{CSS}}</style>
+<script type="application/ld+json">{{JSONLD}}</script>
+</head>
+<body>
+<a class="skip" href="#rechner">Zum Rechner springen</a>
+<header class="top">
+  <div class="wrap top-in">
+    <a class="brand" href="/" aria-label="derarbeitszeitrechner.de – Startseite">
+      <svg aria-hidden="true" width="26" height="26" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="currentColor"/><circle cx="16" cy="16" r="9" fill="none" stroke="#fff" stroke-width="2.5"/><path d="M16 10.5V16l3.5 2.5" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/></svg>
+      <span>derarbeitszeitrechner<span class="tld">.de</span></span>
+    </a>
+    <nav class="topnav" aria-label="Seitenbereiche">
+      <a href="#ratgeber">Ratgeber</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<section class="hero" id="rechner" aria-labelledby="h1">
+  <div class="wrap">
+    <h1 id="h1">Arbeitszeitrechner</h1>
+    <p class="sub">Stundenrechner mit Pausen, Woche, Monat und Lohn – kostenlos und ohne Anmeldung</p>
+
+    <div class="card calc" id="calc">
+      <div class="calc-head">
+        <div class="tabs" role="tablist" aria-label="Rechner wählen">
+          <button role="tab" id="tab-tag" aria-controls="tag" aria-selected="true" data-tab="tag">Tag</button>
+          <button role="tab" id="tab-woche" aria-controls="woche" aria-selected="false" tabindex="-1" data-tab="woche">Woche</button>
+          <button role="tab" id="tab-monat" aria-controls="monat" aria-selected="false" tabindex="-1" data-tab="monat">Monat</button>
+          <button role="tab" id="tab-feierabend" aria-controls="feierabend" aria-selected="false" tabindex="-1" data-tab="feierabend">Feierabend</button>
+          <button role="tab" id="tab-addieren" aria-controls="addieren" aria-selected="false" tabindex="-1" data-tab="addieren">Addieren</button>
+          <button role="tab" id="tab-dezimal" aria-controls="dezimal" aria-selected="false" tabindex="-1" data-tab="dezimal">Dezimal</button>
+        </div>
+      </div>
+
+      <!-- TAG -->
+      <div role="tabpanel" id="tag" aria-labelledby="tab-tag" class="panel">
+        <div class="times">
+          <div class="field">
+            <label for="d-start">Beginn</label>
+            <input id="d-start" class="in in-time" type="text" inputmode="numeric" autocomplete="off" placeholder="08:00" value="08:00" aria-describedby="hint-time">
+          </div>
+          <span class="dash" aria-hidden="true">–</span>
+          <div class="field">
+            <label for="d-end">Ende</label>
+            <input id="d-end" class="in in-time" type="text" inputmode="numeric" autocomplete="off" placeholder="16:30" value="16:30" aria-describedby="hint-time">
+          </div>
+        </div>
+
+        <fieldset class="breaks">
+          <legend>Pausen</legend>
+          <div id="d-breaks">
+            <div class="brk" data-kind="min">
+              <select class="in brk-kind" aria-label="Art der Pause 1"><option value="min" selected>Minuten</option><option value="range">von – bis</option></select>
+              <span class="brk-min"><input class="in in-num brk-minutes" type="text" inputmode="numeric" value="30" aria-label="Pause 1 in Minuten"> <span class="unit">Min.</span></span>
+              <button type="button" class="icon-btn brk-del" aria-label="Pause 1 entfernen">×</button>
+            </div>
+          </div>
+          <button type="button" class="btn-link" id="d-add-break">+ Pause</button>
+        </fieldset>
+
+        <div class="result" id="d-result" aria-live="polite">
+          <div class="res-main">
+            <div>
+              <div class="res-label">Arbeitszeit</div>
+              <div class="res-big"><span id="r-hm">{{PRE_HM}}</span> h</div>
+              <div class="res-dec">= <span id="r-dec">{{PRE_DEC}}</span> h dezimal <span class="badge" id="r-next" hidden>+1 Tag</span></div>
+            </div>
+            <button type="button" class="btn-ghost copy" id="r-copy" aria-label="Ergebnis kopieren">Kopieren</button>
+          </div>
+          <dl class="res-facts">
+            <div><dt>Anwesenheit</dt><dd id="r-gross">{{PRE_GROSS}} h</dd></div>
+            <div><dt>Pausen</dt><dd id="r-break">{{PRE_BREAK}} h</dd></div>
+            <div id="r-night-wrap" hidden><dt>Nachtarbeit (23–6 Uhr)</dt><dd id="r-night"></dd></div>
+            <div id="r-pay-wrap" hidden><dt>Brutto</dt><dd id="r-pay"></dd></div>
+            <div id="r-diff-wrap" hidden><dt>Plus/Minus zum Soll</dt><dd id="r-diff"></dd></div>
+          </dl>
+          <ul class="notes" id="r-notes"><li class="note ok">Pausen und Höchstarbeitszeit nach Arbeitszeitgesetz eingehalten.</li></ul>
+        </div>
+        <div class="row-date">
+          <label class="lbl-inline" for="d-date">Datum</label>
+          <input type="date" id="d-date" class="in in-date" value="{{TODAY}}">
+          <span class="save-state" id="d-save" aria-live="polite"></span>
+        </div>
+        <div class="chips" role="group" aria-label="Vorlagen"><span class="chips-l">Vorlagen</span>
+          <button type="button" class="chip" data-tpl="08:00|16:30|30">8–16:30</button>
+          <button type="button" class="chip" data-tpl="09:00|17:00|30">9–17</button>
+          <button type="button" class="chip" data-tpl="07:00|15:30|30">7–15:30</button>
+          <button type="button" class="chip" data-tpl="22:00|06:00|30">Nachtschicht 22–6</button>
+          <button type="button" class="chip chip-alt" id="d-now">Ende = jetzt</button>
+          <button type="button" class="chip chip-alt" id="d-copy-prev" hidden>Gestern kopieren</button>
+        </div>
+        <p class="hint" id="hint-time">Tipp: „830“ wird zu 08:30, „8“ zu 08:00.</p>
+        <div class="row-actions">
+          <button type="button" class="btn-link danger" id="d-clear">Eintrag löschen</button>
+        </div>
+      </div>
+
+      <!-- WOCHE -->
+      <div role="tabpanel" id="woche" aria-labelledby="tab-woche" class="panel" hidden>
+        <div class="pager">
+          <button type="button" class="icon-btn" id="w-prev" aria-label="Vorherige Woche">‹</button>
+          <div class="pager-title" id="w-title" aria-live="polite">Kalenderwoche</div>
+          <button type="button" class="icon-btn" id="w-next" aria-label="Nächste Woche">›</button>
+        </div>
+        <div class="table-wrap">
+          <table class="wtable">
+            <thead><tr><th scope="col">Tag</th><th scope="col">Beginn</th><th scope="col">Ende</th><th scope="col">Pause (Min.)</th><th scope="col">Arbeitszeit</th><th scope="col">+/−</th></tr></thead>
+            <tbody id="w-body"></tbody>
+          </table>
+        </div>
+        <div class="sum-grid" id="w-sum"></div>
+        <ul class="notes" id="w-notes"></ul>
+      </div>
+
+      <!-- MONAT -->
+      <div role="tabpanel" id="monat" aria-labelledby="tab-monat" class="panel" hidden>
+        <div class="pager">
+          <button type="button" class="icon-btn" id="m-prev" aria-label="Vorheriger Monat">‹</button>
+          <div class="pager-title" id="m-title" aria-live="polite">Monat</div>
+          <button type="button" class="icon-btn" id="m-next" aria-label="Nächster Monat">›</button>
+        </div>
+        <div class="sum-grid" id="m-sum"></div>
+        <ul class="notes" id="m-notes"></ul>
+        <ol class="mlist" id="m-list"></ol>
+        <div class="export">
+          <h3 class="h-small">Exportieren</h3>
+          <div class="btn-row">
+            <button type="button" class="btn" data-export="xlsx">Excel (.xlsx)</button>
+            <button type="button" class="btn" data-export="pdf">PDF-Stundenzettel</button>
+            <button type="button" class="btn" data-export="csv">CSV</button>
+            <button type="button" class="btn" data-export="print">Drucken</button>
+          </div>
+          <details class="backup">
+            <summary>Datensicherung (JSON)</summary>
+            <p class="hint">Alle Jobs und Einträge als Datei sichern oder auf einem anderen Gerät wiederherstellen.</p>
+            <div class="btn-row">
+              <button type="button" class="btn-ghost" id="b-export">Backup herunterladen</button>
+              <label class="btn-ghost file-btn">Backup einspielen<input type="file" id="b-import" accept="application/json,.json" class="sr-only"></label>
+            </div>
+          </details>
+        </div>
+      </div>
+
+      <!-- FEIERABEND -->
+      <div role="tabpanel" id="feierabend" aria-labelledby="tab-feierabend" class="panel" hidden>
+        <p class="lead">Wann kann ich gehen? Beginn und Sollzeit eingeben – die Pflichtpause wird automatisch eingerechnet.</p>
+        <div class="times">
+          <div class="field">
+            <label for="f-start">Beginn</label>
+            <input id="f-start" class="in in-time" type="text" inputmode="numeric" autocomplete="off" value="08:00">
+          </div>
+          <div class="field">
+            <label for="f-target">Sollzeit (h:mm)</label>
+            <input id="f-target" class="in in-time" type="text" inputmode="decimal" autocomplete="off" value="8:00">
+          </div>
+          <div class="field">
+            <label for="f-break">Pause geplant (Min.)</label>
+            <input id="f-break" class="in in-num" type="text" inputmode="numeric" autocomplete="off" placeholder="auto" value="">
+          </div>
+        </div>
+        <div class="result" aria-live="polite">
+          <div class="res-label">Feierabend frühestens</div>
+          <div class="res-big"><span id="f-end">16:30</span> Uhr <span class="badge" id="f-next" hidden>+1 Tag</span></div>
+          <div class="res-dec" id="f-detail">inkl. 30 Min. Pause</div>
+          <dl class="res-facts">
+            <div id="f-left-wrap" hidden><dt>Noch bis Feierabend</dt><dd id="f-left"></dd></div>
+            <div><dt>Spätestens (10 h Höchstarbeitszeit)</dt><dd id="f-latest"></dd></div>
+          </dl>
+        </div>
+      </div>
+
+      <!-- ADDIEREN -->
+      <div role="tabpanel" id="addieren" aria-labelledby="tab-addieren" class="panel" hidden>
+        <p class="lead">Stunden addieren: Dauer („7:45“, „7,75“) oder Zeitraum („8:00-12:30“) je Zeile.</p>
+        <div id="a-rows" class="arows"></div>
+        <button type="button" class="btn-link" id="a-add">+ Zeile</button>
+        <div class="result" aria-live="polite">
+          <div class="res-label">Summe</div>
+          <div class="res-big"><span id="a-hm">0:00</span> h</div>
+          <div class="res-dec">= <span id="a-dec">0,00</span> h dezimal</div>
+          <dl class="res-facts">
+            <div><dt>Addiert</dt><dd id="a-plus">0:00 h</dd></div>
+            <div><dt>Abgezogen</dt><dd id="a-minus">0:00 h</dd></div>
+          </dl>
+        </div>
+        <button type="button" class="btn-link danger" id="a-reset">Alle Zeilen leeren</button>
+      </div>
+
+      <!-- DEZIMAL -->
+      <div role="tabpanel" id="dezimal" aria-labelledby="tab-dezimal" class="panel" hidden>
+        <div class="conv">
+          <div class="field">
+            <label for="z-hm">Stunden und Minuten (h:mm)</label>
+            <input id="z-hm" class="in" type="text" inputmode="decimal" autocomplete="off" value="7:45">
+          </div>
+          <div class="conv-out" aria-live="polite">= <strong id="z-hm-out">7,75</strong> h dezimal</div>
+        </div>
+        <div class="conv">
+          <div class="field">
+            <label for="z-dec">Dezimalstunden</label>
+            <input id="z-dec" class="in" type="text" inputmode="decimal" autocomplete="off" value="0,8">
+          </div>
+          <div class="conv-out" aria-live="polite">= <strong id="z-dec-out">0:48</strong> h (h:mm)</div>
+        </div>
+        <div class="conv">
+          <div class="field">
+            <label for="z-min">Minuten</label>
+            <input id="z-min" class="in" type="text" inputmode="numeric" autocomplete="off" value="45">
+          </div>
+          <div class="conv-out" aria-live="polite">= <strong id="z-min-out">0,75</strong> h dezimal</div>
+        </div>
+        <p class="hint"><a href="#dezimal-tabelle">Zur Tabelle 1–60 Minuten in Dezimal</a></p>
+      </div>
+
+      <details class="settings" id="settings">
+        <summary>Einstellungen: Job, Sollzeit, Stundenlohn, unter 18</summary>
+        <div class="set-grid">
+          <div class="field">
+            <label for="p-select">Job / Profil</label>
+            <div class="inline">
+              <select id="p-select" class="in"></select>
+              <button type="button" class="btn-ghost" id="p-new">+ Neu</button>
+            </div>
+          </div>
+          <div class="field">
+            <label for="p-name">Name des Jobs</label>
+            <input id="p-name" class="in" type="text" autocomplete="off" value="Mein Job">
+          </div>
+          <div class="field">
+            <label for="p-weekly">Sollzeit pro Woche (h)</label>
+            <input id="p-weekly" class="in in-num" type="text" inputmode="decimal" autocomplete="off" value="40">
+          </div>
+          <div class="field">
+            <label for="p-wage">Stundenlohn (€, optional)</label>
+            <input id="p-wage" class="in in-num" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 15,00">
+          </div>
+          <fieldset class="field wd">
+            <legend>Arbeitstage</legend>
+            <div class="wd-list" id="p-days"></div>
+          </fieldset>
+          <div class="field checks">
+            <label class="check"><input type="checkbox" id="p-minor"> Unter 18 (Jugendarbeitsschutzgesetz)</label>
+            <label class="check"><input type="checkbox" id="p-auto"> Mindestpause abziehen, wenn weniger eingetragen</label>
+            <label class="check"><input type="checkbox" id="p-bakery"> Bäckerei/Konditorei (Nachtzeit 22–5 Uhr)</label>
+          </div>
+        </div>
+        <button type="button" class="btn-link danger" id="p-delete">Diesen Job löschen</button>
+      </details>
+
+      <p class="privacy"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5Zm-3 8V7a3 3 0 1 1 6 0v3H9Z"/></svg> Deine Eingaben bleiben auf deinem Gerät und werden nur in deinem Browser gespeichert.</p>
+    </div>
+    <ul class="trust" aria-label="Vorteile"><li>Kostenlos</li><li>Ohne Anmeldung</li><li>Daten bleiben im Browser</li><li>Prüfung nach Arbeitszeitgesetz</li></ul>
+    <p class="disclaimer">Ergebnis ohne Gewähr, keine Rechtsberatung. Tarifverträge und Betriebsvereinbarungen können abweichen.</p>
+  </div>
+</section>
+
+<div class="wrap content" id="ratgeber">
+<article>
+<section aria-labelledby="h-berechnen">
+<h2 id="h-berechnen">So berechnest du deine Arbeitszeit</h2>
+<p>Deine Arbeitszeit ist die Zeit zwischen Arbeitsbeginn und Arbeitsende – abzüglich aller Pausen. Die Formel lautet:</p>
+<p class="formula"><strong>Arbeitszeit = (Ende − Beginn) − Pausen</strong></p>
+<p>Der Arbeitszeitrechner oben erledigt das live beim Tippen: Du gibst Beginn und Ende ein, trägst eine oder mehrere Pausen ein und siehst sofort das Ergebnis in Stunden und Minuten und als Dezimalzahl. Endet deine Schicht nach Mitternacht, erkennt der Rechner das automatisch und rechnet das Ende in den nächsten Tag (Hinweis „+1 Tag“).</p>
+<h3>Beispiel 1: normaler Arbeitstag</h3>
+<p>Du arbeitest von 7:30 bis 16:15 Uhr und machst 45 Minuten Mittagspause.</p>
+<ul>
+<li>16:15 − 7:30 = 8 Stunden 45 Minuten Anwesenheit</li>
+<li>8:45 − 0:45 Pause = <strong>8:00 Stunden Arbeitszeit</strong> (8,00 h dezimal)</li>
+</ul>
+<h3>Beispiel 2: Nachtschicht</h3>
+<p>Du arbeitest von 22:00 bis 6:00 Uhr mit 30 Minuten Pause.</p>
+<ul>
+<li>Von 22:00 bis 24:00 sind es 2 Stunden, von 0:00 bis 6:00 weitere 6 Stunden – zusammen 8 Stunden.</li>
+<li>8:00 − 0:30 Pause = <strong>7:30 Stunden Arbeitszeit</strong> (7,50 h dezimal)</li>
+<li>Davon fallen 7 Stunden in die gesetzliche Nachtzeit von 23 bis 6 Uhr.</li>
+</ul>
+<p>Eine Nachtschicht zählt immer zu dem Tag, an dem sie beginnt. In der Wochen- und Monatsansicht prüft der Rechner zusätzlich, ob zwischen zwei Schichten die vorgeschriebenen 11 Stunden Ruhezeit liegen.</p>
+<h3>Arbeitszeit speichern: Woche und Monat</h3>
+<p>Alles, was du im Tagesrechner einträgst, wird für das gewählte Datum in deinem Browser gespeichert – ganz ohne Konto. In der Wochenansicht siehst du alle Tage von Montag bis Sonntag mit Plus und Minus zur Sollzeit, in der Monatsansicht die Summe des echten Kalendermonats, dein Soll, den Saldo und deine Überstunden. Mit „Gestern kopieren“ übernimmst du gleiche Schichten mit einem Tipp. Für mehrere Jobs legst du in den Einstellungen einfach weitere Profile an.</p>
+</section>
+
+<section aria-labelledby="h-pause">
+<h2 id="h-pause">Arbeitszeitrechner mit Pause: Wie lange muss die Pause sein?</h2>
+<p>Wie lange deine Pause mindestens sein muss, regelt § 4 des Arbeitszeitgesetzes (ArbZG). Entscheidend ist die reine Arbeitszeit ohne Pausen:</p>
+<div class="table-wrap">
+<table>
+<caption>Pflichtpausen nach Arbeitszeitgesetz und Jugendarbeitsschutzgesetz</caption>
+<thead><tr><th scope="col">Arbeitszeit am Tag</th><th scope="col">Erwachsene (§ 4 ArbZG)</th><th scope="col">Unter 18 (§ 11 JArbSchG)</th></tr></thead>
+<tbody>
+<tr><td>bis 4,5 Stunden</td><td>keine Pause vorgeschrieben</td><td>keine Pause vorgeschrieben</td></tr>
+<tr><td>mehr als 4,5 bis 6 Stunden</td><td>keine Pause vorgeschrieben</td><td>30 Minuten</td></tr>
+<tr><td>mehr als 6 bis 9 Stunden</td><td>30 Minuten</td><td>60 Minuten</td></tr>
+<tr><td>mehr als 9 Stunden</td><td>45 Minuten</td><td>60 Minuten (max. 8 h Arbeit)</td></tr>
+</tbody>
+</table>
+</div>
+<p>Dabei gilt: Die Pause darf aufgeteilt werden, aber jeder Abschnitt muss mindestens 15 Minuten lang sein. Drei Kaffeepausen à 10 Minuten zählen also nicht als Pflichtpause. Außerdem darfst du nicht länger als 6 Stunden am Stück ohne Pause arbeiten – Jugendliche nicht länger als 4,5 Stunden.</p>
+<p>Der Rechner zeigt dir in Klartext, wenn Pausenminuten fehlen, zum Beispiel „15 Min. Pause fehlen“. Er verändert deine Eingaben aber nie still. Wenn du möchtest, dass fehlende Pflichtpausen automatisch abgezogen werden – so machen es viele Zeiterfassungen –, aktivierst du in den Einstellungen „Mindestpause abziehen, wenn weniger eingetragen“.</p>
+<h3>Wie lange darf ich am Tag arbeiten?</h3>
+<p>Nach § 3 ArbZG darf die werktägliche Arbeitszeit 8 Stunden nicht überschreiten. Sie kann auf bis zu 10 Stunden verlängert werden, wenn du innerhalb von sechs Monaten im Durchschnitt auf 8 Stunden pro Werktag kommst. Der Rechner zeigt ab 8 Stunden einen Hinweis und ab 10 Stunden eine rote Warnung. Zwischen Feierabend und dem nächsten Arbeitsbeginn müssen mindestens 11 Stunden Ruhezeit liegen (§ 5 ArbZG).</p>
+</section>
+
+<section aria-labelledby="h-woche">
+<h2 id="h-woche">Wochenarbeitszeit und Monatsstunden berechnen</h2>
+<p>Deine Wochenarbeitszeit ist die Summe aller Arbeitstage von Montag bis Sonntag. In der Wochenansicht des Rechners trägst du jeden Tag ein und siehst sofort, wie viele Stunden dir zur Sollzeit noch fehlen oder wie viele Überstunden du gemacht hast. Leere Tage zählen dabei als 0 Stunden.</p>
+<p>Für die Monatsstunden gibt es zwei Wege. Arbeitsverträge und Lohnabrechnungen rechnen meist mit dem Durchschnitt: Ein Jahr hat 52 Wochen, geteilt durch 12 Monate ergibt das rund <strong>4,33 Wochen pro Monat</strong>. Die Monatsansicht des Rechners nutzt dagegen den echten Kalender und zählt die tatsächlichen Arbeitstage des Monats. So siehst du dein genaues Soll und deinen Saldo.</p>
+<div class="table-wrap">
+<table>
+<caption>Monatliche Arbeitszeit – Tabelle (Wochenstunden × 4,33)</caption>
+<thead><tr><th scope="col">Wochenstunden</th><th scope="col">Monatsstunden (h:mm)</th><th scope="col">Monatsstunden (dezimal)</th></tr></thead>
+<tbody>{{MONTH_TABLE}}</tbody>
+</table>
+</div>
+<p>Beispiel: Bei 40 Stunden pro Woche sind es 40 × 4,33 = 173,2 Stunden im Monat, also 173 Stunden und 12 Minuten.</p>
+<h3>Überstunden berechnen</h3>
+<p>Überstunden sind die Differenz zwischen geleisteter Arbeitszeit und deiner Sollzeit: <strong>Überstunden = Ist-Stunden − Soll-Stunden</strong>. Hast du in einer 40-Stunden-Woche 43:30 Stunden gearbeitet, sind das 3:30 Überstunden. Ein negatives Ergebnis bedeutet Minusstunden. Wochen- und Monatsansicht rechnen das automatisch für dich.</p>
+</section>
+
+<section aria-labelledby="h-dezimal">
+<h2 id="h-dezimal">Dezimalzahl in Stunden und Minuten umrechnen</h2>
+<p>Viele Lohnabrechnungen und Zeiterfassungen zeigen Stunden als Dezimalzahl. 7,75 Stunden sind dabei nicht 7 Stunden und 75 Minuten, sondern 7 Stunden und 45 Minuten. So rechnest du um:</p>
+<ul>
+<li><strong>Minuten in Dezimal:</strong> Minuten ÷ 60. Beispiel: 45 Minuten ÷ 60 = 0,75 Stunden.</li>
+<li><strong>Dezimal in Minuten:</strong> Nachkommastellen × 60. Beispiel: 0,8 Stunden × 60 = 48 Minuten.</li>
+</ul>
+<p>Im Tab „Dezimal“ oben rechnest du beide Richtungen sofort um. Zum Nachschlagen hier die Tabelle für alle Minuten von 1 bis 60:</p>
+<div class="table-wrap" id="dezimal-tabelle">
+<table class="dec-table">
+<caption>Dezimal-in-Minuten-Tabelle: 1 bis 60 Minuten</caption>
+<thead><tr><th scope="col">Minuten</th><th scope="col">Dezimal</th><th scope="col">Minuten</th><th scope="col">Dezimal</th><th scope="col">Minuten</th><th scope="col">Dezimal</th></tr></thead>
+<tbody>{{DECIMAL_TABLE}}</tbody>
+</table>
+</div>
+<p>Werte mit mehr als zwei Nachkommastellen sind auf zwei Stellen gerundet. Der Rechner selbst rechnet intern immer in ganzen Minuten, damit sich keine Rundungsfehler aufsummieren.</p>
+</section>
+
+<section aria-labelledby="h-lohn">
+<h2 id="h-lohn">Stundenrechner mit Lohn</h2>
+<p>Trägst du in den Einstellungen deinen Stundenlohn ein, berechnet der Rechner deinen Bruttolohn für den Tag, die Woche und den Monat: <strong>Brutto = Arbeitsstunden (dezimal) × Stundenlohn</strong>. Bei 8 Stunden und 13,90 € pro Stunde sind das 111,20 € brutto.</p>
+<p>Der gesetzliche Mindestlohn beträgt seit 1. Januar 2026 <strong>13,90 € pro Stunde</strong> und steigt zum 1. Januar 2027 auf <strong>14,60 €</strong>. Liegt dein eingegebener Stundenlohn darunter, zeigt der Rechner einen Hinweis. Für Minijobs gilt 2026 eine Verdienstgrenze von 603 € im Monat (ab 2027: 633 €) – die Monatsansicht warnt, wenn dein Brutto darüber liegt.</p>
+<p>Zuschläge für Nacht-, Sonntags- und Feiertagsarbeit sind nicht eingerechnet. Ob und in welcher Höhe sie dir zustehen, regeln Arbeitsvertrag oder Tarifvertrag.</p>
+</section>
+
+<section aria-labelledby="h-excel">
+<h2 id="h-excel">Arbeitszeit in Excel berechnen</h2>
+<p>Excel speichert Uhrzeiten als Bruchteil eines Tages. Damit die Rechnung stimmt, brauchst du die richtigen Formeln und Formate. Angenommen, in Spalte B steht der Beginn, in C das Ende und in D die Pause in Minuten:</p>
+<div class="table-wrap">
+<table>
+<caption>Excel-Formeln für die Zeiterfassung</caption>
+<thead><tr><th scope="col">Zweck</th><th scope="col">Formel (deutsches Excel)</th><th scope="col">Zellformat</th></tr></thead>
+<tbody>
+<tr><td>Arbeitszeit</td><td><code>=C2-B2-D2/1440</code></td><td><code>[h]:mm</code></td></tr>
+<tr><td>Arbeitszeit mit Nachtschicht</td><td><code>=REST(C2-B2;1)-D2/1440</code></td><td><code>[h]:mm</code></td></tr>
+<tr><td>Arbeitszeit als Dezimalzahl</td><td><code>=(REST(C2-B2;1)-D2/1440)*24</code></td><td><code>0,00</code></td></tr>
+<tr><td>Summe des Monats</td><td><code>=SUMME(E2:E32)</code></td><td><code>[h]:mm</code></td></tr>
+<tr><td>Bruttolohn</td><td><code>=F33*Stundenlohn</code></td><td>Währung</td></tr>
+</tbody>
+</table>
+</div>
+<p>Wichtig ist das Format <code>[h]:mm</code> mit eckigen Klammern: Ohne sie springt Excel nach 24 Stunden wieder auf 0, und deine Monatssumme wäre falsch.</p>
+<p>Du willst nichts selbst bauen? Lade dir die fertige <strong>Zeiterfassung als Excel-Vorlage</strong> für {{YEAR}} kostenlos herunter – mit allen Formeln, Wochentagen und Summenzeile. Oder trage deine Zeiten oben im Rechner ein und exportiere den Monat als Excel-Datei, CSV oder PDF-Stundenzettel mit Unterschriftsfeld.</p>
+<p><button type="button" class="btn" id="tpl-download">Excel-Vorlage {{YEAR}} herunterladen</button></p>
+</section>
+
+<section aria-labelledby="h-faq" id="faq">
+<h2 id="h-faq">Häufige Fragen</h2>
+{{FAQ_HTML}}
+</section>
+
+<section aria-labelledby="h-recht" class="legal-note">
+<h2 id="h-recht">Rechtshinweis und Quellen</h2>
+<p>Alle Angaben ohne Gewähr und keine Rechtsberatung. Tarifverträge, Betriebsvereinbarungen und Sonderregeln für einzelne Branchen können abweichen. Die Prüfregeln beruhen auf diesen Quellen:</p>
+<ul class="sources">
+<li><a href="https://www.gesetze-im-internet.de/arbzg/BJNR117100994.html" rel="noopener">Arbeitszeitgesetz (ArbZG), §§ 2–5</a></li>
+<li><a href="https://www.gesetze-im-internet.de/jarbschg/__11.html" rel="noopener">Jugendarbeitsschutzgesetz (JArbSchG), § 11</a></li>
+<li><a href="https://www.bundesregierung.de/breg-de/service/fragen-und-anworten/mindestlohn-faq-1688186" rel="noopener">Bundesregierung: Mindestlohn und Minijob-Grenze</a></li>
+</ul>
+<p class="stand">Stand: {{STAND}}</p>
+</section>
+</article>
+</div>
+</main>
+
+<footer class="foot">
+  <div class="wrap foot-in">
+    <p>© {{YEAR}} derarbeitszeitrechner.de – kostenloser Arbeitszeitrechner und Stundenrechner</p>
+    <nav aria-label="Rechtliches"><a href="/impressum">Impressum</a> <a href="/datenschutz">Datenschutz</a> <a href="/kontakt">Kontakt</a></nav>
+  </div>
+</footer>
+<div id="print-area" class="print-only" aria-hidden="true"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script type="module" src="{{ASSETS}}/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,412 @@
+// Rechenkern: reine Funktionen ohne UI-Abhängigkeit.
+// Intern wird ausschließlich in ganzen Minuten gerechnet.
+import { LAW, valueAt } from './config.js';
+
+const DAY = 1440;
+
+/* ---------- Eingabe ---------- */
+
+// "8" → 480, "830" → 510, "0830", "8:30", "8.30", "16,15" → Minuten. Ungültig → null
+export function parseTime(input) {
+  if (input === null || input === undefined) return null;
+  if (typeof input === 'number') return Number.isFinite(input) ? input : null;
+  const s = String(input).trim().replace(/\s*uhr$/i, '');
+  if (!s) return null;
+  let h;
+  let m;
+  const sep = s.match(/^(\d{1,2})\s*[:.,h]\s*(\d{0,2})$/i);
+  if (sep) {
+    h = +sep[1];
+    m = sep[2] === '' ? 0 : +sep[2];
+  } else if (/^\d{1,4}$/.test(s)) {
+    if (s.length <= 2) { h = +s; m = 0; }
+    else if (s.length === 3) { h = +s[0]; m = +s.slice(1); }
+    else { h = +s.slice(0, 2); m = +s.slice(2); }
+  } else return null;
+  if (h > 24 || m > 59 || (h === 24 && m > 0)) return null;
+  return h * 60 + m;
+}
+
+// Dauer: "7:45", "7,75", "7.75", "45 min", "-1:30" → Minuten
+export function parseDuration(input) {
+  if (input === null || input === undefined) return null;
+  let s = String(input).trim().toLowerCase().replace(/\s+/g, '');
+  if (!s) return null;
+  let sign = 1;
+  if (/^[-−]/.test(s)) { sign = -1; s = s.slice(1); }
+  s = s.replace(/(h|std|stunden)$/, '');
+  let r = s.match(/^(\d+):(\d{1,2})$/);
+  if (r) { if (+r[2] > 59) return null; return sign * (+r[1] * 60 + +r[2]); }
+  r = s.match(/^(\d+)(?:m|min|minuten)$/);
+  if (r) return sign * +r[1];
+  r = s.match(/^(\d*)[.,]?(\d*)$/);
+  if (r && (r[1] || r[2])) return sign * decimalToMinutes(parseFloat(`${r[1] || 0}.${r[2] || 0}`));
+  return null;
+}
+
+export const decimalToMinutes = (h) => Math.round(h * 60);
+export const minutesToDecimal = (m) => Math.round((m / 60) * 100) / 100;
+
+/* ---------- Ausgabe ---------- */
+
+export function formatHM(min, { sign = false } = {}) {
+  if (min === null || min === undefined || Number.isNaN(min)) return '–';
+  const neg = min < 0;
+  const a = Math.abs(Math.round(min));
+  const str = `${Math.floor(a / 60)}:${String(a % 60).padStart(2, '0')}`;
+  if (neg) return `−${str}`;
+  return sign && a > 0 ? `+${str}` : str;
+}
+
+export function formatDecimal(min, { sign = false } = {}) {
+  if (min === null || min === undefined || Number.isNaN(min)) return '–';
+  const v = (Math.abs(min) / 60).toFixed(2).replace('.', ',');
+  if (min < 0 && v !== '0,00') return `−${v}`;
+  return sign && min > 0 ? `+${v}` : v;
+}
+
+export function formatClock(min) {
+  if (min === null || min === undefined) return '';
+  const m = ((Math.round(min) % DAY) + DAY) % DAY;
+  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+}
+
+export function formatEuro(cents) {
+  const neg = cents < 0;
+  const a = Math.abs(Math.round(cents));
+  const euros = Math.floor(a / 100).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return `${neg ? '−' : ''}${euros},${String(a % 100).padStart(2, '0')} €`;
+}
+
+/* ---------- Datum ---------- */
+
+export function parseIso(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+export function toIso(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+export function addDays(iso, n) {
+  const d = parseIso(iso);
+  d.setDate(d.getDate() + n);
+  return toIso(d);
+}
+export function mondayOf(iso) {
+  const d = parseIso(iso);
+  const wd = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - wd);
+  return toIso(d);
+}
+export function isoWeek(iso) {
+  const d = parseIso(iso);
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  const jan4 = new Date(d.getFullYear(), 0, 4);
+  return 1 + Math.round(((d - jan4) / 864e5 - 3 + ((jan4.getDay() + 6) % 7)) / 7);
+}
+export function daysInMonth(year, month) {
+  return new Date(year, month, 0).getDate(); // month 1–12
+}
+// Absolute Minuten (lokale Zeit, berücksichtigt Zeitumstellung)
+export function absMinutes(iso, min) {
+  const [y, m, d] = iso.split('-').map(Number);
+  return Math.round(new Date(y, m - 1, d, 0, min).getTime() / 60000);
+}
+export const WEEKDAYS = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+export const WEEKDAYS_SHORT = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+export const MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+
+/* ---------- Tagesrechnung ---------- */
+
+export function requiredBreak(workMin, minor = false) {
+  for (const r of minor ? LAW.breaksMinor : LAW.breaksAdult) if (workMin > r.over) return r.minutes;
+  return 0;
+}
+
+function thresholdFor(required, minor) {
+  for (const r of minor ? LAW.breaksMinor : LAW.breaksAdult) if (r.minutes === required) return r.over;
+  return 0;
+}
+
+function overlap(a1, a2, b1, b2) {
+  return Math.max(0, Math.min(a2, b2) - Math.max(a1, b1));
+}
+
+export function nightMinutes(s, e, bakery = false) {
+  const w = bakery ? LAW.nightBakery : LAW.night;
+  let total = 0;
+  for (let k = -1; k <= 2; k++) total += overlap(s, e, k * DAY + w.from, (k + 1) * DAY + w.to);
+  return total;
+}
+
+/**
+ * Berechnet einen Arbeitstag.
+ * @param {object} p
+ *  start, end: Minuten oder Text ("8:00")
+ *  breaks: [{ kind: 'min', minutes } | { kind: 'range', from, to }]
+ *  minor: Jugendliche (unter 18), bakery: Bäckerei-Nachtzeit,
+ *  autoDeduct: Mindestpause abziehen, wenn weniger eingetragen
+ *  date: ISO-Datum (optional, für Zeitumstellung)
+ */
+export function calcDay(p) {
+  const start = parseTime(p.start);
+  const end = parseTime(p.end);
+  const minor = !!p.minor;
+  const res = {
+    valid: false, start, end, nextDay: false, gross: 0, breakTotal: 0, breakCounted: 0,
+    shortBreaks: 0, net: 0, required: 0, missing: 0, deducted: 0, night: 0, warnings: [],
+  };
+  if (start === null || end === null) return res;
+  res.valid = true;
+
+  const s = start;
+  let e = end;
+  if (e < s) { e += DAY; res.nextDay = true; }
+  res.gross = e - s;
+  if (p.date) {
+    const endIso = res.nextDay ? addDays(p.date, 1) : p.date;
+    res.gross = absMinutes(endIso, end) - absMinutes(p.date, start);
+  }
+  const dst = res.gross - (e - s);
+
+  // Pausen einsortieren
+  const ranges = [];
+  let minuteBreaks = 0;
+  let outside = false;
+  for (const b of p.breaks || []) {
+    if (b.kind === 'range') {
+      const f = parseTime(b.from);
+      const t = parseTime(b.to);
+      if (f === null || t === null) continue;
+      const dur = (t - f + DAY) % DAY;
+      if (dur === 0) continue;
+      let f2 = f;
+      if (f2 < s) f2 += DAY;
+      const a = Math.max(f2, s);
+      const z = Math.min(f2 + dur, e);
+      if (z <= a) { outside = true; continue; }
+      if (z - a < dur) outside = true;
+      ranges.push([a, z]);
+    } else {
+      const m = typeof b.minutes === 'number' ? b.minutes : parseDuration(b.minutes);
+      if (m && m > 0) {
+        minuteBreaks++;
+        res.breakTotal += m;
+        if (m >= LAW.minBreakSegment) res.breakCounted += m; else res.shortBreaks++;
+      }
+    }
+  }
+  ranges.sort((x, y) => x[0] - y[0]);
+  const merged = [];
+  for (const r of ranges) {
+    const last = merged[merged.length - 1];
+    if (last && r[0] <= last[1]) last[1] = Math.max(last[1], r[1]);
+    else merged.push([...r]);
+  }
+  for (const [a, z] of merged) {
+    const d = z - a;
+    res.breakTotal += d;
+    if (d >= LAW.minBreakSegment) res.breakCounted += d; else res.shortBreaks++;
+  }
+
+  res.net = Math.max(0, res.gross - res.breakTotal);
+  res.required = requiredBreak(res.net, minor);
+  const lack = Math.max(0, res.required - res.breakCounted);
+
+  if (lack > 0 && p.autoDeduct) {
+    const floor = thresholdFor(res.required, minor);
+    const newNet = Math.max(res.net - lack, Math.min(res.net, floor));
+    res.deducted = res.net - newNet;
+    res.net = newNet;
+    res.missing = 0;
+  } else {
+    res.missing = lack;
+  }
+  res.night = nightMinutes(s, e, !!p.bakery);
+
+  // Hinweise
+  const W = res.warnings;
+  if (res.missing > 0) {
+    const limit = res.required === (minor ? 60 : 45)
+      ? (minor ? 'mehr als 6 Stunden' : 'mehr als 9 Stunden')
+      : (minor ? 'mehr als 4,5 Stunden' : 'mehr als 6 Stunden');
+    W.push({
+      level: 'warn', code: 'break',
+      text: `${res.missing} Min. Pause fehlen: Bei ${limit} Arbeit sind mindestens ${res.required} Minuten Pause vorgeschrieben (${minor ? '§ 11 JArbSchG' : '§ 4 ArbZG'}).`,
+    });
+  }
+  if (res.shortBreaks > 0 && res.required > 0 && (res.missing > 0 || res.deducted > 0)) {
+    W.push({
+      level: 'warn', code: 'short',
+      text: `Pausenabschnitte unter ${LAW.minBreakSegment} Minuten zählen nicht als Pflichtpause (${res.shortBreaks}× eingetragen).`,
+    });
+  }
+  if (res.deducted > 0) {
+    W.push({ level: 'info', code: 'deducted', text: `Mindestpause abgezogen: ${res.deducted} Min. zusätzlich, weil weniger Pause eingetragen war.` });
+  }
+  if (merged.length && !minuteBreaks) {
+    const maxBlock = minor ? LAW.maxBlockMinor : LAW.maxBlockAdult;
+    let cursor = s;
+    let longest = 0;
+    for (const [a, z] of merged) {
+      if (z - a < LAW.minBreakSegment) continue;
+      longest = Math.max(longest, a - cursor);
+      cursor = z;
+    }
+    longest = Math.max(longest, e - cursor);
+    if (longest > maxBlock) {
+      W.push({
+        level: 'warn', code: 'block',
+        text: `Du arbeitest ${formatHM(longest)} h am Stück. Länger als ${minor ? '4,5' : '6'} Stunden ohne Pause ist nicht erlaubt.`,
+      });
+    }
+  }
+  if (outside) W.push({ level: 'info', code: 'outside', text: 'Eine Pause liegt ganz oder teilweise außerhalb der Arbeitszeit und wird nur innerhalb gezählt.' });
+  if (minor && res.net > LAW.dailyMaxMinor) {
+    W.push({ level: 'error', code: 'max', text: 'Jugendliche dürfen höchstens 8 Stunden am Tag arbeiten (§ 8 JArbSchG).' });
+  } else if (!minor && res.net > LAW.dailyMax) {
+    W.push({ level: 'error', code: 'max', text: 'Über 10 Stunden: Mehr als 10 Stunden Arbeitszeit am Tag sind nach § 3 ArbZG nicht erlaubt.' });
+  } else if (!minor && res.net > LAW.dailyRegular) {
+    W.push({ level: 'info', code: 'over8', text: 'Über 8 Stunden: Erlaubt sind bis zu 10 Stunden, wenn du im Schnitt von 6 Monaten auf 8 Stunden pro Werktag kommst (§ 3 ArbZG).' });
+  }
+  if (dst !== 0) {
+    W.push({ level: 'info', code: 'dst', text: `Zeitumstellung in dieser Schicht: ${dst > 0 ? 'eine Stunde mehr' : 'eine Stunde weniger'} gerechnet.` });
+  }
+  return res;
+}
+
+/* ---------- Ruhezeit ---------- */
+
+// entries: [{ date, start, end }] beliebig sortiert. Liefert Verstöße gegen § 5 ArbZG.
+export function restViolations(entries, minor = false) {
+  const min = minor ? LAW.minRestMinor : LAW.minRest;
+  const list = entries
+    .map((x) => ({ x, s: parseTime(x.start), e: parseTime(x.end) }))
+    .filter((o) => o.x.date && o.s !== null && o.e !== null && o.s !== o.e)
+    .map((o) => {
+      const endIso = o.e < o.s ? addDays(o.x.date, 1) : o.x.date;
+      return { date: o.x.date, startAbs: absMinutes(o.x.date, o.s), endAbs: absMinutes(endIso, o.e) };
+    })
+    .sort((a, b) => a.startAbs - b.startAbs);
+  const out = [];
+  for (let i = 1; i < list.length; i++) {
+    const rest = list[i].startAbs - list[i - 1].endAbs;
+    if (rest < min) {
+      out.push({
+        date: list[i].date, prevDate: list[i - 1].date, rest,
+        text: rest < 0
+          ? 'Schichten überschneiden sich.'
+          : `Ruhezeit nur ${formatHM(rest)} h statt ${min / 60} h (${minor ? '§ 13 JArbSchG' : '§ 5 ArbZG'}).`,
+      });
+    }
+  }
+  return out;
+}
+
+/* ---------- Lohn ---------- */
+
+export function wageCents(netMin, hourlyRate) {
+  const rateCents = Math.round(Number(hourlyRate) * 100);
+  if (!Number.isFinite(rateCents) || rateCents <= 0) return 0;
+  return Math.round((netMin * rateCents) / 60);
+}
+export const minWageAt = (iso) => valueAt(LAW.minWage, iso);
+export const minijobAt = (iso) => valueAt(LAW.minijobLimit, iso);
+export function belowMinWage(rate, iso) {
+  const r = Number(rate);
+  return Number.isFinite(r) && r > 0 && r < minWageAt(iso);
+}
+
+/* ---------- Woche / Monat ---------- */
+
+export const weeklyToMonthly = (weeklyMin) => Math.round(weeklyMin * LAW.weeksPerMonth);
+
+export function dailyTarget(profile) {
+  const days = profile.workdays?.length || 5;
+  return Math.round((profile.weeklyMinutes ?? 2400) / days);
+}
+function isWorkday(iso, profile) {
+  return (profile.workdays || [1, 2, 3, 4, 5]).includes(parseIso(iso).getDay());
+}
+
+function summarize(dates, entries, profile) {
+  const opts = { minor: profile.minor, autoDeduct: profile.autoDeduct, bakery: profile.bakery };
+  const target = dailyTarget(profile);
+  let total = 0;
+  let soll = 0;
+  let night = 0;
+  let workedDays = 0;
+  const days = dates.map((date) => {
+    const entry = entries[date] || null;
+    const result = entry ? calcDay({ ...entry, ...opts, date }) : null;
+    const net = result && result.valid ? result.net : 0;
+    const daySoll = isWorkday(date, profile) ? target : 0;
+    total += net;
+    soll += daySoll;
+    if (result && result.valid) { night += result.night; if (net > 0) workedDays++; }
+    return { date, entry, result, net, soll: daySoll, diff: net - daySoll };
+  });
+  const rest = restViolations(dates.map((d) => entries[d] && { ...entries[d], date: d }).filter(Boolean), profile.minor);
+  const pay = profile.wage ? wageCents(total, profile.wage) : 0;
+  return { days, total, soll, saldo: total - soll, overtime: Math.max(0, total - soll), night, workedDays, rest, pay };
+}
+
+export function weekSummary(entries, anyIso, profile) {
+  const mon = mondayOf(anyIso);
+  const dates = Array.from({ length: 7 }, (_, i) => addDays(mon, i));
+  return { monday: mon, week: isoWeek(mon), ...summarize(dates, entries, profile) };
+}
+
+export function monthSummary(entries, year, month, profile) {
+  const n = daysInMonth(year, month);
+  const dates = Array.from({ length: n }, (_, i) => `${year}-${String(month).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`);
+  const s = summarize(dates, entries, profile);
+  const first = dates[0];
+  return {
+    year, month, ...s,
+    minijobLimit: minijobAt(first),
+    overMinijob: profile.wage ? s.pay > minijobAt(first) * 100 : false,
+  };
+}
+
+/* ---------- Feierabend ---------- */
+
+export function quittingTime({ start, target, breakMinutes = 0, minor = false }) {
+  const s = parseTime(start);
+  const t = typeof target === 'number' ? target : parseDuration(target);
+  if (s === null || t === null || t < 0) return null;
+  const req = requiredBreak(t, minor);
+  const brk = Math.max(Number(breakMinutes) || 0, req);
+  const maxWork = minor ? LAW.dailyMaxMinor : LAW.dailyMax;
+  const latest = s + maxWork + Math.max(Number(breakMinutes) || 0, requiredBreak(maxWork, minor));
+  return {
+    end: s + t + brk, breakUsed: brk, required: req,
+    nextDay: s + t + brk >= DAY, latest, latestNextDay: latest >= DAY,
+  };
+}
+
+/* ---------- Addieren ---------- */
+
+// rows: [{ op: '+'|'-', value: "7:45" | "8:00-12:30" }]
+export function parseSpan(value) {
+  const s = String(value || '').trim();
+  const r = s.match(/^(.+?)\s*(?:-|–|bis)\s*(.+)$/);
+  if (r && parseTime(r[1]) !== null && parseTime(r[2]) !== null) {
+    const a = parseTime(r[1]);
+    const b = parseTime(r[2]);
+    return (b - a + DAY) % DAY;
+  }
+  return parseDuration(s);
+}
+export function sumRows(rows) {
+  let plus = 0;
+  let minus = 0;
+  let count = 0;
+  for (const row of rows) {
+    const v = parseSpan(row.value);
+    if (v === null) continue;
+    count++;
+    if (row.op === '-') minus += v; else plus += v;
+  }
+  return { plus, minus, total: plus - minus, count };
+}

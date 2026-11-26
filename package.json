@@ -1,0 +1,15 @@
+{
+  "name": "derarbeitszeitrechner",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Arbeitszeitrechner & Stundenrechner – derarbeitszeitrechner.de",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "TZ=Europe/Berlin node --test test/*.test.js",
+    "deploy": "npm run build && npx wrangler deploy"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
