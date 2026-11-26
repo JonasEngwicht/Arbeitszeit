@@ -1,6 +1,6 @@
 # derarbeitszeitrechner.de
 
-Kostenloser Arbeitszeit- und Stundenrechner mit der Unterseite Stundenlohnrechner. Läuft komplett im Browser
+Kostenloser Arbeitszeit- und Stundenrechner mit den Unterseiten Stundenlohnrechner und Brutto-Netto-Rechner. Läuft komplett im Browser
 (keine Server-Datenbank, kein Konto), ausgeliefert über einen Cloudflare Worker mit Static Assets.
 
 ## Aufbau
@@ -15,9 +15,12 @@ Kostenloser Arbeitszeit- und Stundenrechner mit der Unterseite Stundenlohnrechne
 | `src/index.html`, `src/styles.css`, `src/faq.mjs` | Seite, Design, FAQ (auch als strukturierte Daten) |
 | `src/stundenlohnrechner.html`, `src/js/lohn.js`, `src/faq-stundenlohn.mjs` | Unterseite `/stundenlohnrechner`: Vorlage, Oberfläche, FAQ. Alle Euro-Beträge im Text setzt der Build aus dem Rechenkern ein |
 | `src/site.json` | Betreiberdaten für Impressum/Datenschutz, „Stand“-Datum |
+| `src/js/netto.js` | Netto-Rechenkern: Lohnsteuer nach dem amtlichen Programmablaufplan des BMF (2026 endgültig, 2027 Entwurf), Solidaritätszuschlag, Kirchensteuer, Sozialversicherung, Netto → Brutto |
+| `src/brutto-netto-rechner.html`, `src/js/bn.js`, `src/faq-brutto-netto.mjs` | Unterseite `/brutto-netto-rechner`: Vorlage, Oberfläche, FAQ. Alle Beträge im Text setzt der Build aus dem Netto-Rechenkern ein |
 | `scripts/build.mjs` | Build ohne Abhängigkeiten → `public/` (vorgerendert, CSS inline, Assets mit Hash). Kopf, Fußzeile und Rechner-Navigation aller Seiten kommen aus der Liste `TOOLS` |
 | `worker/index.js` | Weiterleitungen (www, derstundenrechner.de → 301), Sicherheits- und Cache-Header |
 | `test/core.test.js` | Die 12 Abnahme-Testfälle plus Randfälle, dazu die Testfälle des Stundenlohnrechners |
+| `test/netto.test.js` | Amtliche Prüftabellen des BMF (2026 und Entwurf 2027, je 516 Werte) und von Hand nachgerechnete Beiträge |
 
 ## Entwickeln
 
@@ -42,5 +45,12 @@ PWA mit Service Worker (`public/sw.js` wird vom Build erzeugt). Alles im Rechenk
 ## Jährliche Pflege
 
 - Neue Rechtswerte in `src/js/config.js` mit `from`-Datum anhängen (z. B. Mindestlohn).
+- Netto-Rechner: Sobald das BMF den endgültigen Programmablaufplan für das neue Jahr veröffentlicht, die Werte in
+  `TAX_YEARS` (`src/js/netto.js`) mit dem Abschnitt MPARA und dem Tarif (UPTAB) abgleichen, die beiden Prüftabellen
+  am Ende des Dokuments in `test/netto.test.js` übernehmen und `draft` auf `false` setzen. `npm test` muss alle
+  Tabellenwerte auf den Euro genau treffen. Der Rechner nimmt automatisch die Werte des laufenden Kalenderjahres.
+- Stand 26.11.2026: 2027 beruht auf dem Entwurf vom 8.10.2026 und wird im Rechner als „vorläufig“ gekennzeichnet.
+  Der Entwurf nennt für die Beitragsbemessungsgrenze der Rentenversicherung im Text 106.240 €, im Ablaufplan
+  106.200 €; nur mit 106.200 € stimmen seine Prüftabellen. In der endgültigen Fassung prüfen.
 - `stand` in `src/site.json` aktualisieren.
 - Texte zum Mindestlohn in `src/index.html` (Abschnitt „Stundenrechner mit Lohn“) prüfen.

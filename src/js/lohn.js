@@ -1,5 +1,6 @@
 // Oberfläche des Stundenlohnrechners (/stundenlohnrechner). Rechnet mit dem Rechenkern aus core.js.
 import { salaryInfo, wageInfo, formatEuro, toIso } from './core.js';
+import { netSalary, taxYearFor } from './netto.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -37,6 +38,7 @@ function computeSalary() {
   const period = $('s-period').value;
   const info = salaryInfo({ amount, period, weeklyHours: hours, iso: todayIso() });
   $('s-copy').hidden = !info;
+  renderNet(info, hours);
   if (!info) {
     $('s-rate').textContent = '–';
     $('s-detail').textContent = hours === 0 ? 'Wochenstunden müssen größer als 0 sein' : 'Gehalt und Wochenstunden eingeben';
@@ -50,6 +52,20 @@ function computeSalary() {
   $('s-year').textContent = euro(info.yearly);
   $('s-mh').textContent = `${dec(info.monthlyHours)} h`;
   $('s-notes').innerHTML = noteHtml(notesFor(info, $('s-minijob').checked));
+}
+
+// Netto-Schätzung: Steuerklasse wählbar, sonst ohne Kinder und ohne Kirchensteuer
+function renderNet(info, hours) {
+  const out = $('s-net');
+  if (!info) { out.textContent = '–'; return; }
+  const year = taxYearFor(Number(todayIso().slice(0, 4)));
+  const r = netSalary({ year, grossMonthly: info.monthly, taxClass: Number($('s-class').value), minijobLimit: info.minijobLimit });
+  if (r.zone === 'minijob') {
+    out.textContent = 'Minijob: Der Lohn wird in der Regel ohne Steuerabzug ausgezahlt.';
+    return;
+  }
+  const perHour = Math.round(r.net / ((hours * 13) / 3));
+  out.textContent = `ca. ${formatEuro(perHour)} netto pro Stunde · ${formatEuro(r.net)} im Monat${r.zone === 'midijob' ? ' (Übergangsbereich nicht eingerechnet, tatsächlich etwas mehr)' : ''}${r.draft ? ` · Werte ${r.year} vorläufig` : ''}`;
 }
 
 function computeWage() {
