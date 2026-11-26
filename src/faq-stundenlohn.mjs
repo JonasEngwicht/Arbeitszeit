@@ -23,7 +23,7 @@ export const faqStundenlohn = (v) => [
   },
   {
     q: 'Was bleibt vom Stundenlohn netto übrig?',
-    a: 'Das hängt von Steuerklasse, Kinderzahl, Kirchensteuer, Bundesland und Krankenkasse ab – ein fester Prozentsatz wäre deshalb falsch. Dieser Rechner zeigt den Bruttostundenlohn, also den Betrag vor Steuern und Sozialabgaben. Im Minijob wird der Lohn in der Regel ohne Abzüge ausgezahlt, wenn du dich von der Rentenversicherungspflicht befreien lässt.',
+    a: `Von ${v.exRate} brutto pro Stunde bleiben ${v.taxYear} in Steuerklasse I rund ${v.exNetHour} netto, bei 40 Wochenstunden also ${v.exNetMonth} im Monat (ohne Kinder, ohne Kirchensteuer). Der genaue Betrag hängt von Steuerklasse, Kindern, Kirchensteuer, Bundesland und Krankenkasse ab. Der Rechner zeigt eine Netto-Schätzung für deine Steuerklasse; alle Angaben berücksichtigt der Brutto-Netto-Rechner. Im Minijob wird der Lohn in der Regel ohne Abzüge ausgezahlt, wenn du dich von der Rentenversicherungspflicht befreien lässt.`,
   },
   {
     q: 'Zählen Urlaubsgeld und Weihnachtsgeld zum Stundenlohn?',

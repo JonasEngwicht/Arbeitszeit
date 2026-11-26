@@ -19,6 +19,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="modulepreload" href="{{ASSETS}}/core.js">
 <link rel="modulepreload" href="{{ASSETS}}/config.js">
+<link rel="modulepreload" href="{{ASSETS}}/netto.js">
 <style>{{CSS}}</style>
 <script type="application/ld+json">{{JSONLD}}</script>
 </head>
@@ -66,6 +67,12 @@
           </dl>
           <ul class="notes" id="s-notes"><li class="note ok">Über dem gesetzlichen Mindestlohn von {{MINWAGE}} pro Stunde.</li></ul>
         </div>
+        <div class="net-est">
+          <label class="lbl-inline" for="s-class">Netto-Schätzung in Steuerklasse</label>
+          <select id="s-class" class="in in-date"><option value="1" selected>I</option><option value="2">II</option><option value="3">III</option><option value="4">IV</option><option value="5">V</option><option value="6">VI</option></select>
+        </div>
+        <p class="net-out" id="s-net" aria-live="polite">ca. {{EX_NET_HOUR}} netto pro Stunde · {{EX_NET_MONTH}} im Monat</p>
+        <p class="hint" id="s-net-hint">Schätzung für {{TAX_YEAR}}: ohne Kinder, ohne Kirchensteuer, durchschnittlicher Zusatzbeitrag der Krankenkassen. <a href="/brutto-netto-rechner">Genauer rechnen im Brutto-Netto-Rechner</a></p>
       </div>
 
       <div class="panel" id="wage">
@@ -99,8 +106,8 @@
 
       <p class="privacy"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5Zm-3 8V7a3 3 0 1 1 6 0v3H9Z"/></svg> Deine Eingaben bleiben auf deinem Gerät. Nichts wird übertragen oder gespeichert.</p>
     </div>
-    <ul class="trust" aria-label="Vorteile"><li>Kostenlos</li><li>Ohne Anmeldung</li><li>Mit Mindestlohn-Check</li><li>Brutto, vor Steuern und Abgaben</li></ul>
-    <p class="disclaimer">Ergebnis ohne Gewähr, keine Rechts- oder Steuerberatung. Arbeits- und Tarifverträge können abweichend rechnen.</p>
+    <ul class="trust" aria-label="Vorteile"><li>Kostenlos</li><li>Ohne Anmeldung</li><li>Mit Mindestlohn-Check</li><li>Brutto und Netto-Schätzung</li></ul>
+    <p class="disclaimer">Ergebnis ohne Gewähr, keine Rechts- oder Steuerberatung. Das Netto ist eine Schätzung. Arbeits- und Tarifverträge können abweichend rechnen.</p>
     {{MORE_TOOLS}}
   </div>
 </section>
@@ -138,8 +145,8 @@
 
 <section aria-labelledby="h-brutto">
 <h2 id="h-brutto">Brutto oder netto?</h2>
-<p>Dieser Rechner zeigt den Bruttostundenlohn, also den Betrag vor Steuern und Sozialabgaben. Auch der gesetzliche Mindestlohn und die Stundenlöhne in Arbeits- und Tarifverträgen sind Bruttowerte – deshalb vergleichst du mit dem Bruttostundenlohn richtig.</p>
-<p>Wie viel davon netto bleibt, hängt von deiner Steuerklasse, Kinderfreibeträgen, Kirchensteuer, deinem Bundesland und dem Zusatzbeitrag deiner Krankenkasse ab. Vom Brutto gehen Lohnsteuer, gegebenenfalls Solidaritätszuschlag und Kirchensteuer sowie die Beiträge zur Kranken-, Pflege-, Renten- und Arbeitslosenversicherung ab. Eine Faustformel für alle gibt es nicht; verlässlich ist nur deine Lohnabrechnung.</p>
+<p>Der Stundenlohnrechner zeigt zuerst den Bruttostundenlohn, also den Betrag vor Steuern und Sozialabgaben. Auch der gesetzliche Mindestlohn und die Stundenlöhne in Arbeits- und Tarifverträgen sind Bruttowerte – deshalb vergleichst du mit dem Bruttostundenlohn richtig.</p>
+<p>Darunter steht eine Netto-Schätzung für deine Steuerklasse: Von {{EX_RATE}} brutto pro Stunde bleiben {{TAX_YEAR}} in Steuerklasse I rund <strong>{{EX_NET_HOUR}} netto pro Stunde</strong>, das sind {{EX_NET_MONTH}} im Monat. Vom Brutto gehen Lohnsteuer, gegebenenfalls Solidaritätszuschlag und Kirchensteuer sowie die Beiträge zur Kranken-, Pflege-, Renten- und Arbeitslosenversicherung ab. Mit Kindern, Kirchensteuer, deinem Bundesland und dem Zusatzbeitrag deiner Krankenkasse rechnest du im <a href="/brutto-netto-rechner">Brutto-Netto-Rechner</a>.</p>
 </section>
 
 <section aria-labelledby="h-mindestlohn">
@@ -160,7 +167,7 @@
 
 <section aria-labelledby="h-recht" class="legal-note">
 <h2 id="h-recht">Rechtshinweis und Quellen</h2>
-<p>Alle Angaben ohne Gewähr und keine Rechts- oder Steuerberatung. Arbeitsverträge, Tarifverträge und Betriebsvereinbarungen können den Stundenlohn anders ermitteln, zum Beispiel mit dem Faktor 4,35 oder nach den Arbeitstagen des jeweiligen Monats.</p>
+<p>Alle Angaben ohne Gewähr und keine Rechts- oder Steuerberatung; das Netto ist eine Schätzung. Arbeitsverträge, Tarifverträge und Betriebsvereinbarungen können den Stundenlohn anders ermitteln, zum Beispiel mit dem Faktor 4,35 oder nach den Arbeitstagen des jeweiligen Monats.</p>
 <ul class="sources">
 <li><a href="https://www.bundesregierung.de/breg-de/service/fragen-und-anworten/mindestlohn-faq-1688186" rel="noopener">Bundesregierung: Mindestlohn und Minijob-Grenze</a></li>
 <li><a href="https://www.gesetze-im-internet.de/milog/" rel="noopener">Mindestlohngesetz (MiLoG)</a></li>

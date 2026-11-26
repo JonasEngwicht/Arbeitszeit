@@ -338,3 +338,22 @@ body{background:linear-gradient(180deg,var(--accent-soft) 0,var(--bg) 340px) no-
 .money .copy{position:absolute;top:0;right:0}
 .money .res-big{white-space:nowrap;font-size:38px}
 @media (min-width:700px){.money .res-big{font-size:44px}}
+/* Brutto-Netto-Rechner */
+.in-sel{font-size:17px;font-weight:600;min-height:54px;border-radius:12px}
+.bn-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;margin:12px 0 12px;align-items:end}
+.bn-grid .field label{font-size:13px}
+.bn-grid .checks{grid-column:1/-1}
+@media (min-width:700px){.bn-grid{grid-template-columns:repeat(4,1fr)}}
+.bn-gross{font-weight:600;margin:14px 0 6px}
+.bn-bar{display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--line)}
+.bn-bar span{display:block;height:100%}
+.bn-net{background:var(--accent)}
+.bn-tax{background:var(--warn-line)}
+.bn-soc{background:var(--line-strong)}
+.bn-legend{font-size:13.5px;color:var(--muted);margin:6px 0 10px}
+.bn-table th{font-weight:500}
+.bn-table td{text-align:right;white-space:nowrap;font-weight:600}
+.bn-table .bn-sum th,.bn-table .bn-sum td{font-weight:700;border-top:2px solid var(--line-strong)}
+.bn-hint{color:var(--muted);font-size:13px;font-weight:400;white-space:nowrap}
+.net-est{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0 4px}
+.net-out{font-size:17px;font-weight:650;margin:4px 0 2px}

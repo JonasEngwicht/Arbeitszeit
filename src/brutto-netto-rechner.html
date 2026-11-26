@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}}</title>
+<meta name="description" content="{{DESCRIPTION}}">
+<link rel="canonical" href="{{URL}}/brutto-netto-rechner">
+{{HEAD_COMMON}}
+<meta property="og:type" content="website">
+<meta property="og:locale" content="de_DE">
+<meta property="og:site_name" content="derarbeitszeitrechner.de">
+<meta property="og:title" content="{{TITLE}}">
+<meta property="og:description" content="{{DESCRIPTION}}">
+<meta property="og:url" content="{{URL}}/brutto-netto-rechner">
+<meta property="og:image" content="{{URL}}/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="modulepreload" href="{{ASSETS}}/netto.js">
+<link rel="modulepreload" href="{{ASSETS}}/core.js">
+<link rel="modulepreload" href="{{ASSETS}}/config.js">
+<style>{{CSS}}</style>
+<script type="application/ld+json">{{JSONLD}}</script>
+</head>
+<body>
+<a class="skip" href="#rechner">Zum Rechner springen</a>
+{{HEADER}}
+
+<main id="main">
+<section class="hero" id="rechner" aria-labelledby="h1">
+  <div class="wrap">
+    <h1 id="h1">Brutto-Netto-Rechner</h1>
+    <p class="sub">Gehaltsrechner für Monatsgehalt und Stundenlohn: Netto, Steuern und Abgaben auf einen Blick – kostenlos und ohne Anmeldung</p>
+
+    <div class="card calc money" id="bn">
+      <div class="panel">
+        <div class="times">
+          <div class="field">
+            <label for="b-gross">Brutto (€)</label>
+            <input id="b-gross" class="in in-time" type="text" inputmode="decimal" autocomplete="off" value="{{EX_GROSS_RAW}}">
+          </div>
+          <div class="field">
+            <label for="b-period">Zeitraum</label>
+            <select id="b-period" class="in in-sel"><option value="month" selected>pro Monat</option><option value="year">pro Jahr</option><option value="hour">pro Stunde</option></select>
+          </div>
+        </div>
+        <div class="bn-grid">
+          <div class="field">
+            <label for="b-class">Steuerklasse</label>
+            <select id="b-class" class="in"><option value="1" selected>I – ledig</option><option value="2">II – alleinerziehend</option><option value="3">III – verheiratet</option><option value="4">IV – verheiratet</option><option value="5">V – verheiratet</option><option value="6">VI – Zweitjob</option></select>
+          </div>
+          <div class="field">
+            <label for="b-state">Bundesland</label>
+            <select id="b-state" class="in"><option value="" selected>– wählen –</option>{{STATE_OPTIONS}}</select>
+          </div>
+          <div class="field">
+            <label for="b-children">Kinder unter 25</label>
+            <select id="b-children" class="in"><option value="0" selected>keine</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5 oder mehr</option></select>
+          </div>
+          <div class="field">
+            <label for="b-zkf">Kinderfreibeträge</label>
+            <select id="b-zkf" class="in"><option value="0" selected>0</option><option value="0.5">0,5</option><option value="1">1</option><option value="1.5">1,5</option><option value="2">2</option><option value="2.5">2,5</option><option value="3">3</option><option value="3.5">3,5</option><option value="4">4</option><option value="4.5">4,5</option><option value="5">5</option><option value="5.5">5,5</option><option value="6">6</option></select>
+          </div>
+          <div class="field">
+            <label for="b-kvz">KV-Zusatzbeitrag (%)</label>
+            <input id="b-kvz" class="in in-num" type="text" inputmode="decimal" autocomplete="off" value="{{KV_ADD_RAW}}">
+          </div>
+          <div class="field" id="b-hours-wrap">
+            <label for="b-hours">Wochenstunden</label>
+            <input id="b-hours" class="in in-num" type="text" inputmode="decimal" autocomplete="off" value="40">
+          </div>
+          <div class="field">
+            <label for="b-year">Jahr</label>
+            <select id="b-year" class="in">{{YEAR_OPTIONS}}</select>
+          </div>
+          <div class="field checks">
+            <label class="check"><input type="checkbox" id="b-church"> Kirchensteuer</label>
+            <label class="check" id="b-age-wrap"><input type="checkbox" id="b-age" checked> 23 Jahre oder älter (Zuschlag für Kinderlose in der Pflegeversicherung)</label>
+          </div>
+        </div>
+
+        <div class="result" aria-live="polite">
+          <div class="res-main">
+            <div>
+              <div class="res-label">Netto im Monat</div>
+              <div class="res-big"><span id="b-net">{{EX_NET}}</span></div>
+              <div class="res-dec" id="b-sub">{{EX_NET_YEAR}} im Jahr · {{EX_NET_HOUR}} pro Stunde</div>
+            </div>
+            <button type="button" class="btn-ghost copy" id="b-copy" aria-label="Netto kopieren">Kopieren</button>
+          </div>
+          <ul class="notes" id="b-notes">{{EX_NOTES}}</ul>
+        </div>
+
+        <div id="b-detail-box">
+          <p class="bn-gross" id="b-gross-out">{{EX_GROSS}} brutto im Monat</p>
+          <div class="bn-bar" id="b-bar" role="img" aria-label="Von {{EX_GROSS}} brutto bleiben {{EX_P_NET}} % netto, {{EX_P_TAX}} % sind Steuern, {{EX_P_SOC}} % Sozialabgaben">
+            <span class="bn-net" id="b-bar-net" style="width:{{EX_P_NET}}%"></span><span class="bn-tax" id="b-bar-tax" style="width:{{EX_P_TAX}}%"></span><span class="bn-soc" id="b-bar-soc" style="width:{{EX_P_SOC}}%"></span>
+          </div>
+          <p class="bn-legend" id="b-legend">Netto {{EX_P_NET}} % · Steuern {{EX_P_TAX}} % · Sozialabgaben {{EX_P_SOC}} %</p>
+          <div class="table-wrap">
+            <table class="bn-table">
+              <caption>Abzüge vom Bruttolohn pro Monat</caption>
+              <tbody id="b-rows">{{EX_ROWS}}</tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" id="reverse">
+        <h2 class="h-small">Netto in Brutto umrechnen</h2>
+        <div class="conv">
+          <div class="field">
+            <label for="n-net">Wunsch-Netto im Monat (€)</label>
+            <input id="n-net" class="in" type="text" inputmode="decimal" autocomplete="off" value="{{REV_NET_RAW}}">
+          </div>
+          <div class="conv-out" aria-live="polite">= <strong id="n-gross">{{REV_GROSS}}</strong> brutto</div>
+        </div>
+        <p class="hint" id="n-detail">nötiges Brutto im Monat für {{REV_NET}} netto · {{REV_GROSS_YEAR}} im Jahr</p>
+        <div class="row-actions"><button type="button" class="btn-ghost" id="n-apply">Dieses Brutto oben einsetzen</button></div>
+        <p class="hint">Es gelten Steuerklasse, Bundesland und die übrigen Angaben von oben.</p>
+      </div>
+
+      <p class="privacy"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5Zm-3 8V7a3 3 0 1 1 6 0v3H9Z"/></svg> Deine Eingaben bleiben auf deinem Gerät. Nichts wird übertragen oder gespeichert.</p>
+    </div>
+    <ul class="trust" aria-label="Vorteile"><li>Kostenlos</li><li>Ohne Anmeldung</li><li>Lohnsteuer nach amtlichem Ablaufplan</li><li>Mit Stundenlohn</li></ul>
+    <p class="disclaimer">Netto-Schätzung ohne Gewähr, keine Steuerberatung. Nicht berücksichtigt: private Krankenversicherung, Beamte, Renten, Freibeträge, Sonderzahlungen, Firmenwagen und der Übergangsbereich (Midijob).</p>
+    {{MORE_TOOLS}}
+  </div>
+</section>
+
+<div class="wrap content" id="ratgeber">
+<article>
+<section aria-labelledby="h-abzuege">
+<h2 id="h-abzuege">Von brutto zu netto: Diese Abzüge gibt es</h2>
+<p>Netto ist dein Bruttolohn abzüglich Steuern und Sozialabgaben. Von {{EX_GROSS_E}} brutto im Monat bleiben {{YEAR}} in Steuerklasse I rund <strong>{{EX_NET_E}} netto</strong>: {{EX_TAXES}} gehen als Steuern ab, {{EX_SOCIAL}} als Sozialabgaben.</p>
+<div class="table-wrap">
+<table>
+<caption>Abzüge vom Bruttolohn {{YEAR}} – dein Anteil als Arbeitnehmer</caption>
+<thead><tr><th scope="col">Abzug</th><th scope="col">Höhe</th><th scope="col">Hinweis</th></tr></thead>
+<tbody>
+<tr><td>Lohnsteuer</td><td>nach Tarif</td><td>abhängig von Steuerklasse und Einkommen</td></tr>
+<tr><td>Solidaritätszuschlag</td><td>bis 5,5 % der Lohnsteuer</td><td>erst ab {{SOLZFREI}} Lohnsteuer im Jahr (Steuerklasse III: das Doppelte)</td></tr>
+<tr><td>Kirchensteuer</td><td>8 % oder 9 % der Lohnsteuer</td><td>nur für Kirchenmitglieder</td></tr>
+<tr><td>Krankenversicherung</td><td>{{KV_RATE}}</td><td>halber allgemeiner Beitragssatz plus halber Zusatzbeitrag (Durchschnitt {{KV_ADD}}), bis {{BBG_KV}} im Monat</td></tr>
+<tr><td>Pflegeversicherung</td><td>{{PV_RATE}}</td><td>Kinderlose ab 23 Jahren {{PV_RATE_CHILDLESS}}; ab dem zweiten Kind weniger</td></tr>
+<tr><td>Rentenversicherung</td><td>{{RV_RATE}}</td><td>bis {{BBG_RV}} im Monat</td></tr>
+<tr><td>Arbeitslosenversicherung</td><td>{{AV_RATE}}</td><td>bis {{BBG_RV}} im Monat</td></tr>
+</tbody>
+</table>
+</div>
+<p>Der Brutto-Netto-Rechner {{YEAR}} oben rechnet live beim Tippen. Die Lohnsteuer ermittelt er nach dem amtlichen Programmablaufplan des Bundesfinanzministeriums, also nach demselben Verfahren wie die Lohnabrechnung deines Arbeitgebers. Arbeitgeber und Arbeitnehmer teilen sich die Sozialbeiträge; angezeigt wird dein Anteil.{{DRAFT_SENTENCE}}</p>
+</section>
+
+<section aria-labelledby="h-steuerklassen">
+<h2 id="h-steuerklassen">Steuerklassen kurz erklärt</h2>
+<p>Die Steuerklasse legt fest, wie viel Lohnsteuer dein Arbeitgeber jeden Monat einbehält. An der Steuer für das ganze Jahr ändert sie nichts – die Steuererklärung gleicht Unterschiede aus.</p>
+<div class="table-wrap">
+<table>
+<caption>Steuerklassen und Netto bei {{EX_GROSS_E}} brutto im Monat ({{YEAR}}, ohne Kirchensteuer)</caption>
+<thead><tr><th scope="col">Steuerklasse</th><th scope="col">Für wen</th><th scope="col">Netto</th></tr></thead>
+<tbody>{{CLASS_TABLE}}</tbody>
+</table>
+</div>
+</section>
+
+<section aria-labelledby="h-stundenlohn">
+<h2 id="h-stundenlohn">Brutto-Netto-Rechner mit Stundenlohn</h2>
+<p>Wirst du nach Stunden bezahlt, stellst du den Zeitraum auf „pro Stunde“ und trägst Stundenlohn und Wochenstunden ein. Der Gehaltsrechner ermittelt daraus dein Monatsbrutto und zeigt, was netto pro Monat und pro Stunde bleibt. Beispiel: {{HOUR_RATE}} pro Stunde bei 40 Wochenstunden sind {{HOUR_GROSS}} brutto und in Steuerklasse I rund <strong>{{HOUR_NET}} netto im Monat</strong>, also {{HOUR_NET_HOUR}} netto pro Stunde.</p>
+<p>Wie du ein Monatsgehalt in einen Stundenlohn umrechnest und was der Mindestlohn im Monat ergibt, zeigt der <a href="/stundenlohnrechner">Stundenlohnrechner</a>. Deine tatsächlich geleisteten Stunden zählst du mit dem <a href="/">Arbeitszeitrechner</a>.</p>
+</section>
+
+<section aria-labelledby="h-netto-brutto">
+<h2 id="h-netto-brutto">Netto in Brutto umrechnen</h2>
+<p>Für {{REV_NET_E}} netto im Monat brauchst du in Steuerklasse I rund {{REV_GROSS_E}} brutto. Weil die Lohnsteuer mit dem Einkommen überproportional steigt, lässt sich das nicht mit einem festen Faktor rechnen. Der Rechner sucht deshalb das kleinste Brutto, das dein Wunsch-Netto erreicht – praktisch für Gehaltsverhandlungen oder wenn du Stunden reduzieren willst. Trage dein Wunsch-Netto im Feld „Netto in Brutto umrechnen“ ein; Steuerklasse und Bundesland übernimmt der Rechner von oben.</p>
+</section>
+
+<section aria-labelledby="h-bundesland">
+<h2 id="h-bundesland">Unterschiede nach Bundesland</h2>
+<p>Lohnsteuer und Sozialbeiträge sind bundesweit gleich; das Bundesland ändert das Netto nur an zwei Stellen:</p>
+<ul>
+<li><strong>Kirchensteuer:</strong> In Bayern und Baden-Württemberg beträgt sie 8 % der Lohnsteuer, in allen anderen Bundesländern – zum Beispiel in Nordrhein-Westfalen (NRW), Hessen oder Berlin – 9 %. Bei {{EX_GROSS_E}} brutto sind das {{KIST_BY}} in Bayern und {{KIST_NW}} in NRW.</li>
+<li><strong>Pflegeversicherung in Sachsen:</strong> Arbeitnehmer in Sachsen tragen einen höheren Anteil ({{PV_RATE_SN}} statt {{PV_RATE}}), dafür ist dort der Buß- und Bettag ein Feiertag. Bei {{EX_GROSS_E}} brutto sind das {{PV_DIFF_SN}} weniger netto im Monat.</li>
+</ul>
+<p>Wähle oben dein Bundesland, dann rechnet der Brutto-Netto-Rechner für Bayern, NRW, Sachsen und alle anderen Länder mit den richtigen Sätzen.</p>
+</section>
+
+<section aria-labelledby="h-teilzeit">
+<h2 id="h-teilzeit">Teilzeit, Minijob und Midijob</h2>
+<p>In Teilzeit sinkt das Netto weniger stark als das Brutto, weil auf das niedrigere Einkommen anteilig weniger Lohnsteuer anfällt. Beispiel in Steuerklasse I: Aus {{HALF_FULL_GROSS}} brutto ({{HALF_FULL_NET}} netto) werden bei halber Stundenzahl {{HALF_GROSS}} brutto und {{HALF_NET}} netto.</p>
+<p>Im <strong>Minijob</strong> bis {{MINIJOB}} im Monat gelten Pauschalabgaben des Arbeitgebers; der Lohn wird in der Regel ohne Steuerabzug ausgezahlt. Im <strong>Übergangsbereich (Midijob)</strong> bis {{MIDIJOB}} im Monat zahlst du geringere Sozialbeiträge. Beide Sonderfälle rechnet der Rechner nicht; er weist dich darauf hin, wenn dein Brutto in einem dieser Bereiche liegt.</p>
+</section>
+
+<section aria-labelledby="h-tabelle">
+<h2 id="h-tabelle">Tabelle: Brutto und Netto im Überblick</h2>
+<p>Die Tabelle zeigt das Netto pro Monat für die Steuerklassen I, III und V – jeweils ohne Kinder, ohne Kirchensteuer und mit dem durchschnittlichen Zusatzbeitrag von {{KV_ADD}}.</p>
+<div class="table-wrap">
+<table class="num-table">
+<caption>Brutto-Netto-Tabelle {{YEAR}}: Netto pro Monat nach Steuerklasse</caption>
+<thead><tr><th scope="col">Brutto</th><th scope="col">Netto Steuerklasse I</th><th scope="col">Netto Steuerklasse III</th><th scope="col">Netto Steuerklasse V</th></tr></thead>
+<tbody>{{NET_TABLE}}</tbody>
+</table>
+</div>
+</section>
+
+<section aria-labelledby="h-faq" id="faq">
+<h2 id="h-faq">Häufige Fragen</h2>
+{{FAQ_HTML}}
+</section>
+
+<section aria-labelledby="h-recht" class="legal-note">
+<h2 id="h-recht">Rechtshinweis und Quellen</h2>
+<p>Netto-Schätzung ohne Gewähr und keine Steuer- oder Rechtsberatung. Maßgeblich ist deine Lohnabrechnung. Nicht berücksichtigt sind unter anderem private Krankenversicherung, Beamtenbezüge, Renten und Versorgungsbezüge, Freibeträge, Sonderzahlungen, Firmenwagen, betriebliche Altersvorsorge, das Faktorverfahren und der Übergangsbereich.</p>
+<ul class="sources">
+<li>{{SOURCE_PAP}}</li>
+<li><a href="https://www.bundesgesundheitsministerium.de/beitraege.html" rel="noopener">Bundesgesundheitsministerium: Beitragssätze und Beitragsbemessungsgrenzen</a></li>
+<li><a href="https://www.bmf-steuerrechner.de" rel="noopener">Lohn- und Einkommensteuerrechner des Bundesfinanzministeriums</a></li>
+</ul>
+<p class="stand">Stand: {{STAND}}</p>
+</section>
+</article>
+</div>
+</main>
+
+{{FOOTER}}
+<script type="module" src="{{ASSETS}}/bn.js"></script>
+</body>
+</html>

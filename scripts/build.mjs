@@ -8,9 +8,11 @@ import {
   calcDay, formatHM, formatDecimal, formatEuro, weeklyToMonthly, toIso, parseIso, MONTHS,
   salaryToHourly, salaryInfo, wageInfo, minijobMaxHours,
 } from '../src/js/core.js';
-import { LAW } from '../src/js/config.js';
+import { LAW, STATES } from '../src/js/config.js';
+import { netSalary, grossForNet, TAX_YEARS, taxYears, taxYearFor, MIDIJOB_MAX } from '../src/js/netto.js';
 import { FAQ } from '../src/faq.mjs';
 import { faqStundenlohn } from '../src/faq-stundenlohn.mjs';
+import { faqBruttoNetto } from '../src/faq-brutto-netto.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const src = (p) => join(root, 'src', p);
@@ -72,6 +74,7 @@ const today = toIso(new Date());
 const TOOLS = [
   { path: '/', label: 'Arbeitszeitrechner', short: 'Arbeitszeit' },
   { path: '/stundenlohnrechner', label: 'Stundenlohnrechner', short: 'Stundenlohn' },
+  { path: '/brutto-netto-rechner', label: 'Brutto-Netto-Rechner', short: 'Brutto-Netto' },
 ];
 const otherTools = (current) => TOOLS.filter((t) => t.path !== current);
 const brandSvg = '<svg aria-hidden="true" width="26" height="26" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="currentColor"/><circle cx="16" cy="16" r="9" fill="none" stroke="#fff" stroke-width="2.5"/><path d="M16 10.5V16l3.5 2.5" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/></svg>';
@@ -160,6 +163,16 @@ const index = fill(readFileSync(src('index.html'), 'utf8'), {
 });
 writeFileSync(join(out, 'index.html'), index);
 
+/* ---------- Netto-Beispielwerte (aus dem Netto-Rechenkern) ---------- */
+const taxYear = taxYearFor(year);
+const TP = TAX_YEARS[taxYear];
+const cents = (c) => formatEuro(c);
+const centsShort = (c) => formatEuro(c).replace(/,00 €$/, ' €');
+const pctDe = (v) => `${v.toFixed(2).replace('.', ',').replace(/,?0+$/, '')} %`;
+const net = (grossMonthly, extra = {}) => netSalary({ year: taxYear, grossMonthly, ...extra });
+const nx = net(3000);
+const monthHours = (h) => (h * 13) / 3;
+
 /* ---------- Stundenlohnrechner ---------- */
 const ex = salaryInfo({ amount: 3000, weeklyHours: 40, iso: today });
 const mw = wageInfo({ rate: minWage.cur.value, weeklyHours: 40, iso: today });
@@ -172,14 +185,15 @@ const lohnValues = {
   minWage: euro(minWage.cur.value), minWageMonth: euro(mw.monthly),
   minWageNextFaq: minWage.next ? `Ab ${dateDe(minWage.next.from)} steigt der Mindestlohn auf ${euro(minWage.next.value)}; das sind dann ${euro(wageInfo({ rate: minWage.next.value, weeklyHours: 40, iso: minWage.next.from }).monthly)} im Monat.` : '',
   minijob: euroShort(minijob.cur.value), minijobHours: dec1(mjHours), minijobHoursWeek: dec1(Math.floor((mjHours * 3) / 13 * 10) / 10),
+  taxYear: String(taxYear), exNetHour: cents(Math.round(nx.net / monthHours(40))), exNetMonth: cents(nx.net),
 };
 const faqLohn = faqStundenlohn(lohnValues).map((f) => ({ q: f.q, a: f.a.trim() }));
 let salaryRows = '';
 for (let g = 1500; g <= 6000; g += 250) {
   salaryRows += `<tr><td>${euroShort(g)}</td>${[40, 35, 30, 20].map((h) => `<td>${euro(salaryToHourly(g, h))}</td>`).join('')}</tr>`;
 }
-const lohnTitle = `Stundenlohnrechner ${year} – Stundenlohn brutto berechnen`;
-const lohnDescription = 'Stundenlohn berechnen: Monatsgehalt in Stundenlohn umrechnen und umgekehrt. Mit Formel, Tabelle und Mindestlohn-Check. Kostenlos, ohne Anmeldung.';
+const lohnTitle = `Stundenlohnrechner ${year} – brutto & netto berechnen`;
+const lohnDescription = 'Stundenlohn berechnen: Gehalt in Stundenlohn umrechnen und zurück, brutto und netto. Mit Formel, Tabelle und Mindestlohn-Check. Kostenlos, ohne Anmeldung.';
 const lohnJsonld = {
   '@context': 'https://schema.org',
   '@graph': [
@@ -243,8 +257,154 @@ const lohnPage = fill(readFileSync(src('stundenlohnrechner.html'), 'utf8'), {
   PT_RATE: euro(salaryToHourly(1500, 20)),
   PT2_HOURS: '30',
   PT2_SALARY: euroShort((ex.monthly * 30) / 40),
+  TAX_YEAR: String(taxYear),
+  EX_NET_HOUR: cents(Math.round(nx.net / monthHours(40))),
+  EX_NET_MONTH: cents(nx.net),
 });
 writeFileSync(join(out, 'stundenlohnrechner.html'), lohnPage);
+
+/* ---------- Brutto-Netto-Rechner ---------- */
+const bnRows = (r) => [
+  ['Lohnsteuer', r.lst, ''],
+  ['Solidaritätszuschlag', r.soli, ''],
+  ['Kirchensteuer', r.kist, r.rates.church ? `${r.rates.church} % der Lohnsteuer` : ''],
+  ['Krankenversicherung', r.kv, pctDe(r.rates.kv)],
+  ['Pflegeversicherung', r.pv, pctDe(r.rates.pv)],
+  ['Rentenversicherung', r.rv, pctDe(r.rates.rv)],
+  ['Arbeitslosenversicherung', r.av, pctDe(r.rates.av)],
+].map(([label, c, hint]) => `<tr><th scope="row">${label}${hint ? ` <span class="bn-hint">${hint}</span>` : ''}</th><td>${cents(c)}</td></tr>`).join('')
+  + `<tr class="bn-sum"><th scope="row">Steuern gesamt</th><td>${cents(r.taxes)}</td></tr>`
+  + `<tr class="bn-sum"><th scope="row">Sozialabgaben gesamt</th><td>${cents(r.social)}</td></tr>`;
+const pNet = Math.round((nx.net / nx.gross) * 100);
+const pTax = Math.round((nx.taxes / nx.gross) * 100);
+const revNet = 2500;
+const revGross = grossForNet(revNet, { year: taxYear });
+const mwGross = mw.monthly;
+const mwNet = net(mwGross);
+const hourRate = 20;
+const hourGross = wageInfo({ rate: hourRate, weeklyHours: 40, iso: today }).monthly;
+const hourNet = net(hourGross);
+const nxBY = net(3000, { state: 'BY', church: true });
+const nxNW = net(3000, { state: 'NW', church: true });
+const nxSN = net(3000, { state: 'SN' });
+const classInfo = [
+  [1, 'I', 'Ledig, geschieden oder verwitwet', {}],
+  [2, 'II', 'Alleinerziehend (hier mit einem Kind)', { children: 1, childAllowances: 1 }],
+  [3, 'III', 'Verheiratet, höheres Einkommen (Partner in V)', {}],
+  [4, 'IV', 'Verheiratet, ähnlich hohe Einkommen', {}],
+  [5, 'V', 'Verheiratet, niedrigeres Einkommen (Partner in III)', {}],
+  [6, 'VI', 'Zweiter und jeder weitere Job', {}],
+];
+const classTable = classInfo.map(([k, roman, who, extra]) => `<tr><td>${roman}</td><td>${who}</td><td>${cents(net(3000, { taxClass: k, ...extra }).net)}</td></tr>`).join('');
+let netRows = '';
+for (let g = 2500; g <= 7000; g += 500) {
+  netRows += `<tr><td>${euroShort(g)}</td>${[1, 3, 5].map((k) => `<td>${cents(net(g, { taxClass: k }).net)}</td>`).join('')}</tr>`;
+}
+const bnValues = {
+  year: String(taxYear), exGross: '3.000 €', exNet: cents(nx.net), exTaxes: cents(nx.taxes), exSocial: cents(nx.social),
+  exNet3: cents(net(3000, { taxClass: 3 }).net), exNet5: cents(net(3000, { taxClass: 5 }).net),
+  kvAdd: pctDe(TP.KV_ZUSATZ_SCHNITT), kvRate: pctDe(nx.rates.kv), pvRate: pctDe(TP.PVSATZAN / 10000),
+  pvRateChildless: pctDe((TP.PVSATZAN + TP.PV_ZUSCHLAG) / 10000), rvRate: pctDe(nx.rates.rv), avRate: pctDe(nx.rates.av),
+  revNet: euroShort(revNet), revGross: euro(revGross),
+  minWage: euro(minWage.cur.value), minWageGross: euro(mwGross), minWageNet: cents(mwNet.net),
+  minWageNetHour: cents(Math.round(mwNet.net / monthHours(40))),
+};
+const faqBn = faqBruttoNetto(bnValues);
+const bnTitle = `Brutto-Netto-Rechner ${year} – Nettogehalt berechnen`;
+const bnDescription = 'Brutto-Netto-Rechner: Nettogehalt aus Monatsgehalt oder Stundenlohn berechnen, mit Steuerklasse, Bundesland und allen Abzügen. Kostenlos, ohne Anmeldung.';
+const bnJsonld = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebApplication',
+      '@id': `${site.url}/brutto-netto-rechner#app`,
+      name: 'Brutto-Netto-Rechner',
+      url: `${site.url}/brutto-netto-rechner`,
+      description: bnDescription,
+      applicationCategory: 'FinanceApplication',
+      operatingSystem: 'Alle (Webbrowser)',
+      inLanguage: 'de-DE',
+      isAccessibleForFree: true,
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'EUR' },
+      featureList: 'Netto aus Monatsgehalt, Jahresgehalt oder Stundenlohn, Steuerklassen I bis VI, Kirchensteuer nach Bundesland, Kinderfreibeträge, Zusatzbeitrag der Krankenkasse, Netto in Brutto umrechnen',
+    },
+    { '@type': 'FAQPage', '@id': `${site.url}/brutto-netto-rechner#faq`, mainEntity: faqEntity(faqBn) },
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Arbeitszeitrechner', item: `${site.url}/` },
+        { '@type': 'ListItem', position: 2, name: 'Brutto-Netto-Rechner', item: `${site.url}/brutto-netto-rechner` },
+      ],
+    },
+  ],
+};
+const draftNote = `Werte für ${taxYear} vorläufig: gerechnet nach dem Entwurf des Bundesfinanzministeriums. Die endgültigen Werte können abweichen.`;
+const bnPage = fill(readFileSync(src('brutto-netto-rechner.html'), 'utf8'), {
+  URL: site.url,
+  ASSETS: assetsPath,
+  CSS: css,
+  HEAD_COMMON: headCommon,
+  HEADER: header('/brutto-netto-rechner'),
+  FOOTER: footer('kostenloser Brutto-Netto-Rechner'),
+  MORE_TOOLS: moreTools('/brutto-netto-rechner'),
+  JSONLD: jsonldString(bnJsonld),
+  TITLE: esc(bnTitle),
+  DESCRIPTION: esc(bnDescription),
+  YEAR: String(taxYear),
+  STAND: site.stand,
+  FAQ_HTML: renderFaq(faqBn),
+  STATE_OPTIONS: Object.entries(STATES).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join(''),
+  YEAR_OPTIONS: taxYears().map((y) => `<option value="${y}"${y === taxYear ? ' selected' : ''}>${y}${TAX_YEARS[y].draft ? ' (vorläufig)' : ''}</option>`).join(''),
+  KV_ADD_RAW: String(TP.KV_ZUSATZ_SCHNITT).replace('.', ','),
+  EX_GROSS_RAW: '3000',
+  EX_GROSS: cents(nx.gross),
+  EX_GROSS_E: '3.000 €',
+  EX_NET: cents(nx.net),
+  EX_NET_E: cents(nx.net),
+  EX_NET_YEAR: cents(nx.net * 12),
+  EX_NET_HOUR: cents(Math.round(nx.net / monthHours(40))),
+  EX_NOTES: TP.draft ? `<li class="note warn">${esc(draftNote)}</li>` : '',
+  EX_P_NET: String(pNet),
+  EX_P_TAX: String(pTax),
+  EX_P_SOC: String(100 - pNet - pTax),
+  EX_ROWS: bnRows(nx),
+  EX_TAXES: cents(nx.taxes),
+  EX_SOCIAL: cents(nx.social),
+  REV_NET_RAW: String(revNet),
+  REV_NET: cents(revNet * 100),
+  REV_NET_E: euroShort(revNet),
+  REV_GROSS: euro(revGross),
+  REV_GROSS_E: euro(revGross),
+  REV_GROSS_YEAR: euro(revGross * 12),
+  SOLZFREI: euroShort(TP.SOLZFREI),
+  KV_RATE: bnValues.kvRate,
+  KV_ADD: bnValues.kvAdd,
+  PV_RATE: bnValues.pvRate,
+  PV_RATE_CHILDLESS: bnValues.pvRateChildless,
+  PV_RATE_SN: pctDe(TP.PVSATZAN_SACHSEN / 10000),
+  RV_RATE: bnValues.rvRate,
+  AV_RATE: bnValues.avRate,
+  BBG_KV: euro(TP.BBGKV / 12),
+  BBG_RV: euroShort(TP.BBGRVALV / 12),
+  DRAFT_SENTENCE: TP.draft ? ` Die Werte für ${taxYear} beruhen auf dem Entwurf des Bundesfinanzministeriums und sind vorläufig.` : '',
+  CLASS_TABLE: classTable,
+  HOUR_RATE: euroShort(hourRate),
+  HOUR_GROSS: euro(hourGross),
+  HOUR_NET: cents(hourNet.net),
+  HOUR_NET_HOUR: cents(Math.round(hourNet.net / monthHours(40))),
+  KIST_BY: cents(nxBY.kist),
+  KIST_NW: cents(nxNW.kist),
+  PV_DIFF_SN: cents(nxSN.pv - nx.pv),
+  HALF_FULL_GROSS: '5.000 €',
+  HALF_FULL_NET: cents(net(5000).net),
+  HALF_GROSS: '2.500 €',
+  HALF_NET: cents(net(2500).net),
+  MINIJOB: euroShort(minijob.cur.value),
+  MIDIJOB: euroShort(MIDIJOB_MAX),
+  NET_TABLE: netRows,
+  SOURCE_PAP: esc(TP.source),
+});
+writeFileSync(join(out, 'brutto-netto-rechner.html'), bnPage);
 
 /* ---------- Unterseiten ---------- */
 function page({ title, description, body, robots = 'index,follow', path }) {
@@ -308,15 +468,16 @@ writeFileSync(join(out, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 <url><loc>${site.url}/</loc><lastmod>${lastmod}</lastmod></url>
 <url><loc>${site.url}/stundenlohnrechner</loc><lastmod>${lastmod}</lastmod></url>
+<url><loc>${site.url}/brutto-netto-rechner</loc><lastmod>${lastmod}</lastmod></url>
 <url><loc>${site.url}/datenschutz</loc></url>
 <url><loc>${site.url}/kontakt</loc></url>
 </urlset>
 `);
 
 /* ---------- Service Worker (offline) ---------- */
-const precache = ['/', '/stundenlohnrechner', ...jsFiles.map((f) => `${assetsPath}/${f}`), '/favicon.svg', '/icon-192.png', '/site.webmanifest'];
+const precache = ['/', '/stundenlohnrechner', '/brutto-netto-rechner', ...jsFiles.map((f) => `${assetsPath}/${f}`), '/favicon.svg', '/icon-192.png', '/site.webmanifest'];
 writeFileSync(join(out, 'sw.js'), `// automatisch erzeugt von scripts/build.mjs
-const CACHE = 'azr-${version}-${createHash('sha256').update(index).update(lohnPage).digest('hex').slice(0, 8)}';
+const CACHE = 'azr-${version}-${createHash('sha256').update(index).update(lohnPage).update(bnPage).digest('hex').slice(0, 8)}';
 const PRECACHE = ${JSON.stringify(precache)};
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
