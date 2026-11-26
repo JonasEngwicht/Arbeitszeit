@@ -111,7 +111,7 @@ function page({ title, description, body, robots = 'index,follow', path }) {
 <html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(title)}</title><meta name="description" content="${esc(description)}"><meta name="robots" content="${robots}">
 ${path ? `<link rel="canonical" href="${site.url}${path}">` : ''}
-<meta name="color-scheme" content="light dark"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><style>${css}</style></head>
+<meta name="color-scheme" content="light dark"><link rel="icon" href="/favicon.ico?v=2" sizes="32x32"><link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml"><link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2"><link rel="manifest" href="/site.webmanifest"><style>${css}</style></head>
 <body><header class="top"><div class="wrap top-in"><a class="brand" href="/"><svg aria-hidden="true" width="26" height="26" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="currentColor"/><circle cx="16" cy="16" r="9" fill="none" stroke="#fff" stroke-width="2.5"/><path d="M16 10.5V16l3.5 2.5" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/></svg><span>derarbeitszeitrechner<span class="tld">.de</span></span></a><nav class="topnav"><a href="/">Zum Rechner</a></nav></div></header>
 <main class="wrap legal">${body}</main>
 <footer class="foot"><div class="wrap foot-in"><p>© ${year} derarbeitszeitrechner.de</p><nav aria-label="Rechtliches"><a href="/impressum">Impressum</a> <a href="/datenschutz">Datenschutz</a> <a href="/kontakt">Kontakt</a></nav></div></footer>

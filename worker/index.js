@@ -29,7 +29,7 @@ export default {
     for (const [k, v] of Object.entries(SECURITY)) out.headers.set(k, v);
     const p = url.pathname;
     if (p.startsWith('/assets/')) out.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
-    else if (/\.(png|svg|ico)$/.test(p)) out.headers.set('Cache-Control', 'public, max-age=604800');
+    else if (/\.(png|svg|ico|webmanifest)$/.test(p)) out.headers.set('Cache-Control', 'public, max-age=604800');
     else out.headers.set('Cache-Control', 'public, max-age=0, must-revalidate');
     if (url.hostname.endsWith('.workers.dev')) out.headers.set('X-Robots-Tag', 'noindex');
     return out;
