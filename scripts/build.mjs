@@ -161,12 +161,11 @@ writeFileSync(join(out, '404.html'), page({
 const staticDir = src('static');
 if (existsSync(staticDir)) for (const f of readdirSync(staticDir)) copyFileSync(join(staticDir, f), join(out, f));
 
-writeFileSync(join(out, 'robots.txt'), `User-agent: *\nAllow: /\n\nSitemap: ${site.url}/sitemap.xml\n`);
+writeFileSync(join(out, 'robots.txt'), `User-agent: *\nAllow: /\nDisallow: /impressum\n\nSitemap: ${site.url}/sitemap.xml\n`);
 const lastmod = toIso(new Date());
 writeFileSync(join(out, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 <url><loc>${site.url}/</loc><lastmod>${lastmod}</lastmod></url>
-<url><loc>${site.url}/impressum</loc></url>
 <url><loc>${site.url}/datenschutz</loc></url>
 <url><loc>${site.url}/kontakt</loc></url>
 </urlset>
