@@ -315,3 +315,6 @@ body{background:linear-gradient(180deg,var(--accent-soft) 0,var(--bg) 340px) no-
 .install .hint{margin:0}
 @media (max-width:640px){.wtable tr.day-row td.wtype{grid-column:1/-1;text-align:left}}
 @media (max-width:640px){.stamp{margin-bottom:8px;flex-wrap:nowrap}.btn-stamp{padding:6px 13px;min-height:40px;font-size:14.5px;white-space:nowrap}.stamp-state{font-size:12.5px;line-height:1.25;flex:1 1 auto}.stamp-state:not(.run){display:none}}
+.note-act{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;justify-content:space-between}
+.btn-fix{appearance:none;font:700 14.5px var(--font);background:var(--warn-text);color:var(--warn-bg);border:0;border-radius:9px;padding:8px 14px;min-height:40px;cursor:pointer}
+.btn-fix:hover{filter:brightness(1.15)}

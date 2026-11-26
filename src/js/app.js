@@ -311,7 +311,9 @@ function computeDay() {
     if (p.surcharges?.enabled && !(p.wage > 0)) notes.push({ level: 'info', code: 'surwage', text: 'Für Zuschläge bitte in den Einstellungen einen Stundenlohn eintragen.' });
   }
   const hasProblem = notes.some((n) => n.level === 'warn' || n.level === 'error');
-  let html = noteHtml(notes);
+  let html = notes.map((w) => (w.code === 'break' && r.missing > 0
+    ? `<li class="note ${w.level} note-act"><span>${esc(w.text)}</span><button type="button" class="btn-fix" id="d-fix-break" data-missing="${r.missing}">Pause automatisch anpassen</button></li>`
+    : `<li class="note ${w.level}">${esc(w.text)}</li>`)).join('');
   if (r.valid && !running && !hasProblem && r.net > 0) html = `<li class="note ok">Pausen und Höchstarbeitszeit nach Arbeitszeitgesetz eingehalten.</li>${html}`;
   if (type === 'work' && !r.valid) html = `<li class="note info">Gib Beginn und Ende ein, zum Beispiel 8 und 1630.</li>${noteHtml(notes.filter((n) => n.code === 'holiday'))}`;
   $('r-notes').innerHTML = html;
@@ -411,6 +413,22 @@ function bindDay() {
     await saveEntry(date, { start: cur.start, end, breaks: cur.breaks || [], type: 'work' });
     loadDay(date);
     toast(`Gehen gespeichert: ${end} Uhr`);
+  });
+  $('r-notes').addEventListener('click', (e) => {
+    const btn = e.target.closest('#d-fix-break');
+    if (!btn) return;
+    const missing = +btn.dataset.missing || 0;
+    if (!missing) return;
+    const breaks = readBreaks().filter((b) => (b.kind === 'min' ? b.minutes : b.from || b.to));
+    // Vorhandene Minutenpause (ab 15 Min.) verlängern, sonst neue Pause anlegen
+    const target = breaks.find((b) => b.kind === 'min' && b.minutes >= 15);
+    if (target) target.minutes += missing;
+    else breaks.push({ kind: 'min', minutes: Math.max(missing, 15) });
+    renderBreaks(breaks);
+    state.dayTouched = true;
+    onDayInput();
+    toast(`Pause um ${missing} Min. ergänzt`);
+    $('r-copy').focus({ preventScroll: true });
   });
   $('d-type').addEventListener('change', () => {
     state.dayTouched = true;

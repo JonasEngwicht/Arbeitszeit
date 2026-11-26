@@ -230,12 +230,10 @@ export function calcDay(p) {
   // Hinweise
   const W = res.warnings;
   if (res.missing > 0) {
-    const limit = res.required === (minor ? 60 : 45)
-      ? (minor ? 'mehr als 6 Stunden' : 'mehr als 9 Stunden')
-      : (minor ? 'mehr als 4,5 Stunden' : 'mehr als 6 Stunden');
+    const limit = res.required === (minor ? 60 : 45) ? (minor ? '6' : '9') : (minor ? '4,5' : '6');
     W.push({
       level: 'warn', code: 'break',
-      text: `${res.missing} Min. Pause fehlen: Bei ${limit} Arbeit sind mindestens ${res.required} Minuten Pause vorgeschrieben (${minor ? '§ 11 JArbSchG' : '§ 4 ArbZG'}).`,
+      text: `${res.missing} Min. Pause fehlen (mind. ${res.required} Min. bei über ${limit} h, ${minor ? '§ 11 JArbSchG' : '§ 4 ArbZG'}).`,
     });
   }
   if (res.shortBreaks > 0 && res.required > 0 && (res.missing > 0 || res.deducted > 0)) {
@@ -270,7 +268,7 @@ export function calcDay(p) {
   } else if (!minor && res.net > LAW.dailyMax) {
     W.push({ level: 'error', code: 'max', text: 'Über 10 Stunden: Mehr als 10 Stunden Arbeitszeit am Tag sind nach § 3 ArbZG nicht erlaubt.' });
   } else if (!minor && res.net > LAW.dailyRegular) {
-    W.push({ level: 'info', code: 'over8', text: 'Über 8 Stunden: Erlaubt sind bis zu 10 Stunden, wenn du im Schnitt von 6 Monaten auf 8 Stunden pro Werktag kommst (§ 3 ArbZG).' });
+    W.push({ level: 'info', code: 'over8', text: 'Über 8 Stunden – bis 10 Stunden nur mit späterem Ausgleich erlaubt (§ 3 ArbZG).' });
   }
   if (dst !== 0) {
     W.push({ level: 'info', code: 'dst', text: `Zeitumstellung in dieser Schicht: ${dst > 0 ? 'eine Stunde mehr' : 'eine Stunde weniger'} gerechnet.` });
