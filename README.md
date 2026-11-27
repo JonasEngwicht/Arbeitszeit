@@ -1,6 +1,6 @@
 # derarbeitszeitrechner.de
 
-Kostenloser Arbeitszeit- und Stundenrechner mit den Unterseiten Stundenlohnrechner und Brutto-Netto-Rechner. Läuft komplett im Browser
+Kostenloser Arbeitszeit- und Stundenrechner mit den Unterseiten Stundenlohnrechner, Brutto-Netto-Rechner und Industrieminuten-Rechner. Läuft komplett im Browser
 (keine Server-Datenbank, kein Konto), ausgeliefert über einen Cloudflare Worker mit Static Assets.
 
 ## Aufbau
@@ -17,8 +17,9 @@ Kostenloser Arbeitszeit- und Stundenrechner mit den Unterseiten Stundenlohnrechn
 | `src/site.json` | Betreiberdaten für Impressum/Datenschutz, „Stand“-Datum |
 | `src/js/netto.js` | Netto-Rechenkern: Lohnsteuer nach dem amtlichen Programmablaufplan des BMF (2026 endgültig, 2027 Entwurf), Solidaritätszuschlag, Kirchensteuer, Sozialversicherung, Netto → Brutto |
 | `src/brutto-netto-rechner.html`, `src/js/bn.js`, `src/faq-brutto-netto.mjs` | Unterseite `/brutto-netto-rechner`: Vorlage, Oberfläche, FAQ. Alle Beträge im Text setzt der Build aus dem Netto-Rechenkern ein |
-| `scripts/build.mjs` | Build ohne Abhängigkeiten → `public/` (vorgerendert, CSS inline, Assets mit Hash). Kopf, Fußzeile und Rechner-Navigation aller Seiten kommen aus der Liste `TOOLS` |
-| `worker/index.js` | Weiterleitungen (www, derstundenrechner.de → 301), Sicherheits- und Cache-Header |
+| `src/industrieminuten-rechner.html`, `src/js/industrie.js`, `src/faq-industrie.mjs` | Unterseite `/industrieminuten-rechner`: Normalzeit ⇄ Industriezeit, Arbeitszeit von–bis in Dezimalstunden, Minuten ⇄ Industrieminuten, Tabellen aus dem Build |
+| `scripts/build.mjs` | Build ohne Abhängigkeiten → `public/` (vorgerendert, CSS inline, Assets mit Hash). Kopf, Fußzeile, Rechner-Navigation und die Karten „Weitere Rechner“ aller Seiten kommen aus der Liste `TOOLS`; Inhaltsverzeichnis (aus den H2 der Vorlage) und strukturierte Daten (`pageGraph`) entstehen ebenfalls im Build, der Title (≤ 60) und Description (≤ 155 Zeichen) prüft |
+| `worker/index.js` | Weiterleitungen (www, derstundenrechner.de und Kurz-Adressen wie `/industrieminuten` → 301), Sicherheits- und Cache-Header |
 | `test/core.test.js` | Die 12 Abnahme-Testfälle plus Randfälle, dazu die Testfälle des Stundenlohnrechners |
 | `test/netto.test.js` | Amtliche Prüftabellen des BMF (2026 und Entwurf 2027, je 516 Werte) und von Hand nachgerechnete Beiträge |
 

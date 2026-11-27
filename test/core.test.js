@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import {
   calcDay, parseTime, parseDuration, formatHM, formatDecimal, formatEuro, wageCents, belowMinWage,
   weeklyToMonthly, restViolations, quittingTime, sumRows, monthSummary, weekSummary, isoWeek,
+  minutesToIndustry, industryToMinutes, parseNormalTime, parseDecimalHours, spanInfo,
 } from '../src/js/core.js';
 
 const codes = (r) => r.warnings.map((w) => w.code);
@@ -287,4 +288,36 @@ test('Teilen-Link: hin und zurück, kaputte Daten → null', () => {
   assert.equal(monthSummary(back.entries, 2026, 11, back.profile).total, 480);
   assert.equal(decodeShare('kaputt!!'), null);
   assert.equal(decodeShare(''), null);
+});
+
+test('Industriezeit: Minuten ↔ Industrieminuten, Normalzeit ↔ Dezimal, von–bis', () => {
+  assert.equal(minutesToIndustry(45), 75);
+  assert.equal(minutesToIndustry(15), 25);
+  assert.equal(minutesToIndustry(60), 100);
+  assert.equal(minutesToIndustry(1), 2); // 1,67 gerundet
+  assert.equal(industryToMinutes(75), 45);
+  assert.equal(industryToMinutes(50), 30);
+  assert.equal(industryToMinutes(100), 60);
+  assert.equal(parseNormalTime('7:45'), 465);
+  assert.equal(parseNormalTime('745'), 465);
+  assert.equal(parseNormalTime('7 h 45 min'), 465);
+  assert.equal(parseNormalTime('7h'), 420);
+  assert.equal(parseNormalTime('8'), 480);
+  assert.equal(parseNormalTime('45 min'), 45);
+  assert.equal(parseNormalTime('7:75'), null);
+  assert.equal(parseNormalTime('775'), null);
+  assert.equal(parseNormalTime(''), null);
+  assert.equal(parseNormalTime('abc'), null);
+  assert.equal(parseDecimalHours('7,75'), 465);
+  assert.equal(parseDecimalHours('7.6 h'), 456);
+  assert.equal(parseDecimalHours('0,8'), 48);
+  assert.equal(parseDecimalHours(','), null);
+  assert.equal(parseDecimalHours('7:45'), null);
+  assert.equal(formatDecimal(parseNormalTime('7:36')), '7,60');
+  assert.equal(formatHM(parseDecimalHours('38,5')), '38:30');
+  assert.deepEqual(spanInfo('07:00', '15:45', 30), { gross: 525, net: 495, pause: 30, nextDay: false });
+  assert.equal(spanInfo('22:00', '06:00', 30).net, 450);
+  assert.equal(spanInfo('22:00', '06:00', 30).nextDay, true);
+  assert.equal(spanInfo('08:00', '09:00', 90), null);
+  assert.equal(spanInfo('', '09:00', 0), null);
 });

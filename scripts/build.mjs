@@ -6,13 +6,14 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   calcDay, formatHM, formatDecimal, formatEuro, weeklyToMonthly, toIso, parseIso, MONTHS,
-  salaryToHourly, salaryInfo, wageInfo, minijobMaxHours,
+  salaryToHourly, salaryInfo, wageInfo, minijobMaxHours, wageCents,
 } from '../src/js/core.js';
 import { LAW, STATES } from '../src/js/config.js';
 import { netSalary, grossForNet, TAX_YEARS, taxYears, taxYearFor, MIDIJOB_MAX } from '../src/js/netto.js';
 import { FAQ } from '../src/faq.mjs';
 import { faqStundenlohn } from '../src/faq-stundenlohn.mjs';
 import { faqBruttoNetto } from '../src/faq-brutto-netto.mjs';
+import { faqIndustrie } from '../src/faq-industrie.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const src = (p) => join(root, 'src', p);
@@ -71,10 +72,12 @@ const faqHtml = renderFaq(FAQ);
 const year = new Date().getFullYear();
 const today = toIso(new Date());
 // Rechner-Seiten: Reihenfolge = Reihenfolge in Navigation und Fußzeile
+const ic = (d) => `<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
 const TOOLS = [
-  { path: '/', label: 'Arbeitszeitrechner', short: 'Arbeitszeit' },
-  { path: '/stundenlohnrechner', label: 'Stundenlohnrechner', short: 'Stundenlohn' },
-  { path: '/brutto-netto-rechner', label: 'Brutto-Netto-Rechner', short: 'Brutto-Netto' },
+  { path: '/', label: 'Arbeitszeitrechner', desc: 'Arbeitsstunden mit Pausen für Tag, Woche und Monat berechnen – mit Überstundenkonto und Excel-Export.', icon: ic('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>') },
+  { path: '/stundenlohnrechner', label: 'Stundenlohnrechner', desc: 'Monatsgehalt in Stundenlohn umrechnen und zurück – mit Mindestlohn-Check und Netto-Schätzung.', icon: ic('<path d="M17 7a6 6 0 1 0 0 10"/><path d="M5 10h8M5 14h8"/>') },
+  { path: '/brutto-netto-rechner', label: 'Brutto-Netto-Rechner', desc: 'Nettogehalt aus Monatsgehalt oder Stundenlohn – mit Steuerklasse, Bundesland und allen Abzügen.', icon: ic('<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/>') },
+  { path: '/industrieminuten-rechner', label: 'Industrieminuten-Rechner', desc: 'Stunden und Minuten in Industriezeit umrechnen und zurück – mit Formel und Tabelle.', icon: ic('<path d="M4 20V10l5 3V10l5 3V5h6v15z"/>') },
 ];
 const otherTools = (current) => TOOLS.filter((t) => t.path !== current);
 const brandSvg = '<svg aria-hidden="true" width="26" height="26" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="currentColor"/><circle cx="16" cy="16" r="9" fill="none" stroke="#fff" stroke-width="2.5"/><path d="M16 10.5V16l3.5 2.5" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/></svg>';
@@ -85,22 +88,68 @@ const headCommon = `<meta name="theme-color" content="#0b5cad" media="(prefers-c
 <link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2">
 <link rel="manifest" href="/site.webmanifest">`;
+const brand = `<a class="brand" href="/" aria-label="derarbeitszeitrechner.de – Startseite">${brandSvg}<span>derarbeitszeitrechner<span class="tld">.de</span></span></a>`;
+// Kopf aller Seiten: Marke und darunter die Rechner-Navigation (aktuelle Seite markiert)
 const header = (current) => `<header class="top">
   <div class="wrap top-in">
-    <a class="brand" href="/" aria-label="derarbeitszeitrechner.de – Startseite">${brandSvg}<span>derarbeitszeitrechner<span class="tld">.de</span></span></a>
-    <nav class="topnav" aria-label="Rechner">${otherTools(current).map((t, i) => `<a${i ? ' class="wide"' : ''} href="${t.path}" aria-label="${t.label}"><span class="nav-l">${t.label}</span><span class="nav-s" aria-hidden="true">${t.short}</span></a>`).join('')}</nav>
+    ${brand}
+    <nav class="topnav" aria-label="Rechner">${TOOLS.map((t) => `<a href="${t.path}"${t.path === current ? ' aria-current="page"' : ''}>${t.label}</a>`).join('')}</nav>
   </div>
 </header>`;
-const navToolsWide = (current) => otherTools(current).map((t) => `<a class="wide" href="${t.path}">${t.label}</a>`).join('\n      ');
-const footNav = `<nav aria-label="Rechner">${TOOLS.map((t) => `<a href="${t.path}">${t.label}</a>`).join(' ')}</nav>
-    <nav aria-label="Rechtliches"><a href="/impressum">Impressum</a> <a href="/datenschutz">Datenschutz</a> <a href="/kontakt">Kontakt</a></nav>`;
 const footer = (tagline) => `<footer class="foot">
   <div class="wrap foot-in">
-    <p>© ${year} derarbeitszeitrechner.de${tagline ? ` – ${tagline}` : ''}</p>
-    ${footNav}
+    <div class="foot-brand">
+      ${brand}
+      <p>Kostenlose Rechner für Arbeitszeit, Lohn und Gehalt. Ohne Anmeldung, ohne Werbung, ohne Tracking – deine Eingaben bleiben auf deinem Gerät.</p>
+    </div>
+    <nav aria-label="Alle Rechner"><p class="foot-h">Rechner</p>${TOOLS.map((t) => `<a href="${t.path}">${t.label}</a>`).join('')}</nav>
+    <nav aria-label="Rechtliches"><p class="foot-h">Rechtliches</p><a href="/impressum">Impressum</a><a href="/datenschutz">Datenschutz</a><a href="/kontakt">Kontakt</a></nav>
+    <p class="foot-copy">© ${year} derarbeitszeitrechner.de${tagline ? ` – ${tagline}` : ''}</p>
   </div>
 </footer>`;
-const moreTools = (current) => `<p class="more-tools">Weitere Rechner: ${otherTools(current).map((t) => `<a href="${t.path}">${t.label}</a>`).join(' · ')}</p>`;
+// Inhaltsverzeichnis aus den H2-Überschriften der Vorlage
+const tocFor = (tpl) => {
+  const items = [...tpl.matchAll(/<h2 id="(h-[\w-]+)">([\s\S]*?)<\/h2>/g)].filter((m) => !['h-recht', 'h-tools'].includes(m[1]));
+  return `<nav class="toc" aria-label="Inhalt"><p class="toc-h">Inhalt</p><ol>${items.map((m) => `<li><a href="#${m[1]}">${m[2]}</a></li>`).join('')}</ol></nav>`;
+};
+const toolCards = (current) => `<section aria-labelledby="h-tools" class="tools-sec">
+<h2 id="h-tools">Weitere kostenlose Rechner</h2>
+<div class="tool-grid">${otherTools(current).map((t) => `<a class="tool-card" href="${t.path}"><span class="tool-ic">${t.icon}</span><span class="tool-t">${t.label}</span><span class="tool-d">${t.desc}</span></a>`).join('')}</div>
+</section>`;
+const about = (method) => `<p class="about"><strong>Über diesen Rechner:</strong> derarbeitszeitrechner.de ist ein unabhängiges, kostenloses Angebot ohne Werbung und ohne Tracking. ${method} Fehler gefunden oder eine Idee? <a href="/kontakt">Schreib uns</a>.</p>`;
+
+/* ---------- Strukturierte Daten: Website, Betreiber, Seite, Rechner, FAQ, Brotkrumen ---------- */
+const orgId = `${site.url}/#org`;
+const websiteId = `${site.url}/#website`;
+const pageGraph = ({ path, title, description, app, faq, crumb }) => {
+  const url = `${site.url}${path}`;
+  const id = (frag) => `${url}#${frag}`;
+  const graph = [
+    { '@type': 'Organization', '@id': orgId, name: site.domain, url: `${site.url}/`, logo: `${site.url}/icon-512.png` },
+    { '@type': 'WebSite', '@id': websiteId, url: `${site.url}/`, name: site.name, alternateName: site.domain, inLanguage: 'de-DE', publisher: { '@id': orgId } },
+    { '@type': 'WebPage', '@id': id('webpage'), url, name: title, description, inLanguage: 'de-DE', isPartOf: { '@id': websiteId }, mainEntity: { '@id': id('app') }, dateModified: today },
+    {
+      '@type': 'WebApplication', '@id': id('app'), url, operatingSystem: 'Alle (Webbrowser)', inLanguage: 'de-DE', isAccessibleForFree: true,
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'EUR' }, publisher: { '@id': orgId }, ...app,
+    },
+    { '@type': 'FAQPage', '@id': id('faq'), mainEntity: faqEntity(faq) },
+  ];
+  if (crumb) {
+    graph.push({
+      '@type': 'BreadcrumbList', '@id': id('breadcrumb'),
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Arbeitszeitrechner', item: `${site.url}/` },
+        { '@type': 'ListItem', position: 2, name: crumb, item: url },
+      ],
+    });
+  }
+  return { '@context': 'https://schema.org', '@graph': graph };
+};
+// Längen prüfen, damit Google nichts abschneidet
+const checkMeta = (title, description) => {
+  if (title.length > 60) throw new Error(`Title zu lang (${title.length}): ${title}`);
+  if (description.length > 155) throw new Error(`Description zu lang (${description.length}): ${description}`);
+};
 
 /* ---------- Rechtswerte als Text (aus config.js, damit nichts von Hand gepflegt wird) ---------- */
 const euro = (v) => formatEuro(Math.round(v * 100));
@@ -113,36 +162,29 @@ const currentAndNext = (list) => {
 const minWage = currentAndNext(LAW.minWage);
 const minijob = currentAndNext(LAW.minijobLimit);
 
-const jsonld = {
-  '@context': 'https://schema.org',
-  '@graph': [
-    {
-      '@type': 'WebApplication',
-      '@id': `${site.url}/#app`,
-      name: 'Arbeitszeitrechner & Stundenrechner online',
-      url: `${site.url}/`,
-      description: 'Arbeitszeit und Arbeitsstunden online berechnen: mit Pausen, Nachtschicht, Woche und Monat, Industrieminuten, Lohn und Prüfung nach Arbeitszeitgesetz. Kostenlos und ohne Anmeldung.',
-      applicationCategory: 'UtilitiesApplication',
-      operatingSystem: 'Alle (Webbrowser)',
-      inLanguage: 'de-DE',
-      isAccessibleForFree: true,
-      offers: { '@type': 'Offer', price: '0', priceCurrency: 'EUR' },
-      featureList: 'Arbeitszeit mit mehreren Pausen, Nachtschicht, Pflichtpausen-Prüfung, Wochen- und Monatsansicht, Gleitzeit- und Überstundenkonto, Feierabendrechner, Stunden addieren, Dezimal- und Industrieminuten-Rechner, Stundenlohn, Export als Excel, CSV und PDF',
-    },
-    {
-      '@type': 'FAQPage',
-      '@id': `${site.url}/#faq`,
-      mainEntity: faqEntity(FAQ),
-    },
-  ],
-};
+const homeTitle = 'Arbeitszeitrechner & Stundenrechner online – mit Pause';
+const homeDescription = 'Arbeitszeit und Arbeitsstunden online berechnen: mit Pausen, Woche & Monat, Industrieminuten und Lohn. Kostenlos, ohne Anmeldung, Excel-Export.';
+checkMeta(homeTitle, homeDescription);
+const jsonld = pageGraph({
+  path: '/',
+  title: homeTitle,
+  description: homeDescription,
+  faq: FAQ,
+  app: {
+    name: 'Arbeitszeitrechner & Stundenrechner online',
+    description: 'Arbeitszeit und Arbeitsstunden online berechnen: mit Pausen, Nachtschicht, Woche und Monat, Industrieminuten, Lohn und Prüfung nach Arbeitszeitgesetz. Kostenlos und ohne Anmeldung.',
+    applicationCategory: 'UtilitiesApplication',
+    featureList: 'Arbeitszeit mit mehreren Pausen, Nachtschicht, Pflichtpausen-Prüfung, Wochen- und Monatsansicht, Gleitzeit- und Überstundenkonto, Feierabendrechner, Stunden addieren, Dezimal- und Industrieminuten-Rechner, Stundenlohn, Export als Excel, CSV und PDF',
+  },
+});
 
 const fill = (tpl, map) => tpl.replace(/\{\{(\w+)\}\}/g, (_, k) => {
   if (!(k in map)) throw new Error(`Platzhalter {{${k}}} nicht befüllt`);
   return map[k];
 });
 
-const index = fill(readFileSync(src('index.html'), 'utf8'), {
+const indexTpl = readFileSync(src('index.html'), 'utf8');
+const index = fill(indexTpl, {
   URL: site.url,
   ASSETS: assetsPath,
   CSS: css,
@@ -157,9 +199,11 @@ const index = fill(readFileSync(src('index.html'), 'utf8'), {
   FAQ_HTML: faqHtml,
   STAND: site.stand,
   YEAR: String(year),
-  NAV_TOOLS: navToolsWide('/'),
-  MORE_TOOLS: moreTools('/'),
-  FOOT_NAV: footNav,
+  HEADER: header('/'),
+  FOOTER: footer('kostenloser Arbeitszeitrechner und Stundenrechner'),
+  TOC: tocFor(indexTpl),
+  TOOL_CARDS: toolCards('/'),
+  ABOUT: about('Der Rechenkern rechnet in ganzen Minuten und wird bei jeder Änderung automatisch gegen feste Testfälle geprüft; die Rechtswerte stammen aus den genannten Quellen.'),
 });
 writeFileSync(join(out, 'index.html'), index);
 
@@ -194,40 +238,31 @@ for (let g = 1500; g <= 6000; g += 250) {
 }
 const lohnTitle = `Stundenlohnrechner ${year} – brutto & netto berechnen`;
 const lohnDescription = 'Stundenlohn berechnen: Gehalt in Stundenlohn umrechnen und zurück, brutto und netto. Mit Formel, Tabelle und Mindestlohn-Check. Kostenlos, ohne Anmeldung.';
-const lohnJsonld = {
-  '@context': 'https://schema.org',
-  '@graph': [
-    {
-      '@type': 'WebApplication',
-      '@id': `${site.url}/stundenlohnrechner#app`,
-      name: 'Stundenlohnrechner',
-      url: `${site.url}/stundenlohnrechner`,
-      description: lohnDescription,
-      applicationCategory: 'FinanceApplication',
-      operatingSystem: 'Alle (Webbrowser)',
-      inLanguage: 'de-DE',
-      isAccessibleForFree: true,
-      offers: { '@type': 'Offer', price: '0', priceCurrency: 'EUR' },
-      featureList: 'Monatsgehalt oder Jahresgehalt in Stundenlohn umrechnen, Stundenlohn in Monatslohn und Jahreslohn umrechnen, Mindestlohn-Prüfung, Minijob-Prüfung, Tabelle Gehalt in Stundenlohn',
-    },
-    { '@type': 'FAQPage', '@id': `${site.url}/stundenlohnrechner#faq`, mainEntity: faqEntity(faqLohn) },
-    {
-      '@type': 'BreadcrumbList',
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'Arbeitszeitrechner', item: `${site.url}/` },
-        { '@type': 'ListItem', position: 2, name: 'Stundenlohnrechner', item: `${site.url}/stundenlohnrechner` },
-      ],
-    },
-  ],
-};
-const lohnPage = fill(readFileSync(src('stundenlohnrechner.html'), 'utf8'), {
+checkMeta(lohnTitle, lohnDescription);
+const lohnJsonld = pageGraph({
+  path: '/stundenlohnrechner',
+  title: lohnTitle,
+  description: lohnDescription,
+  faq: faqLohn,
+  crumb: 'Stundenlohnrechner',
+  app: {
+    name: 'Stundenlohnrechner',
+    description: lohnDescription,
+    applicationCategory: 'FinanceApplication',
+    featureList: 'Monatsgehalt oder Jahresgehalt in Stundenlohn umrechnen, Stundenlohn in Monatslohn und Jahreslohn umrechnen, Mindestlohn-Prüfung, Minijob-Prüfung, Netto-Schätzung, Tabelle Gehalt in Stundenlohn',
+  },
+});
+const lohnTpl = readFileSync(src('stundenlohnrechner.html'), 'utf8');
+const lohnPage = fill(lohnTpl, {
   URL: site.url,
   ASSETS: assetsPath,
   CSS: css,
   HEAD_COMMON: headCommon,
   HEADER: header('/stundenlohnrechner'),
   FOOTER: footer('kostenloser Stundenlohnrechner'),
-  MORE_TOOLS: moreTools('/stundenlohnrechner'),
+  TOC: tocFor(lohnTpl),
+  TOOL_CARDS: toolCards('/stundenlohnrechner'),
+  ABOUT: about('Mindestlohn und Minijob-Grenze sind mit Gültigkeitsdatum hinterlegt und schalten zum Stichtag automatisch um; die Netto-Schätzung nutzt den Rechenkern des Brutto-Netto-Rechners.'),
   JSONLD: jsonldString(lohnJsonld),
   TITLE: esc(lohnTitle),
   DESCRIPTION: esc(lohnDescription),
@@ -312,41 +347,32 @@ const bnValues = {
 const faqBn = faqBruttoNetto(bnValues);
 const bnTitle = `Brutto-Netto-Rechner ${year} – Nettogehalt berechnen`;
 const bnDescription = 'Brutto-Netto-Rechner: Nettogehalt aus Monatsgehalt oder Stundenlohn berechnen, mit Steuerklasse, Bundesland und allen Abzügen. Kostenlos, ohne Anmeldung.';
-const bnJsonld = {
-  '@context': 'https://schema.org',
-  '@graph': [
-    {
-      '@type': 'WebApplication',
-      '@id': `${site.url}/brutto-netto-rechner#app`,
-      name: 'Brutto-Netto-Rechner',
-      url: `${site.url}/brutto-netto-rechner`,
-      description: bnDescription,
-      applicationCategory: 'FinanceApplication',
-      operatingSystem: 'Alle (Webbrowser)',
-      inLanguage: 'de-DE',
-      isAccessibleForFree: true,
-      offers: { '@type': 'Offer', price: '0', priceCurrency: 'EUR' },
-      featureList: 'Netto aus Monatsgehalt, Jahresgehalt oder Stundenlohn, Steuerklassen I bis VI, Kirchensteuer nach Bundesland, Kinderfreibeträge, Zusatzbeitrag der Krankenkasse, Netto in Brutto umrechnen',
-    },
-    { '@type': 'FAQPage', '@id': `${site.url}/brutto-netto-rechner#faq`, mainEntity: faqEntity(faqBn) },
-    {
-      '@type': 'BreadcrumbList',
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'Arbeitszeitrechner', item: `${site.url}/` },
-        { '@type': 'ListItem', position: 2, name: 'Brutto-Netto-Rechner', item: `${site.url}/brutto-netto-rechner` },
-      ],
-    },
-  ],
-};
+checkMeta(bnTitle, bnDescription);
+const bnJsonld = pageGraph({
+  path: '/brutto-netto-rechner',
+  title: bnTitle,
+  description: bnDescription,
+  faq: faqBn,
+  crumb: 'Brutto-Netto-Rechner',
+  app: {
+    name: 'Brutto-Netto-Rechner',
+    description: bnDescription,
+    applicationCategory: 'FinanceApplication',
+    featureList: 'Netto aus Monatsgehalt, Jahresgehalt oder Stundenlohn, Steuerklassen I bis VI, Kirchensteuer nach Bundesland, Kinderfreibeträge, Zusatzbeitrag der Krankenkasse, Netto in Brutto umrechnen',
+  },
+});
+const bnTpl = readFileSync(src('brutto-netto-rechner.html'), 'utf8');
 const draftNote = `Werte für ${taxYear} vorläufig: gerechnet nach dem Entwurf des Bundesfinanzministeriums. Die endgültigen Werte können abweichen.`;
-const bnPage = fill(readFileSync(src('brutto-netto-rechner.html'), 'utf8'), {
+const bnPage = fill(bnTpl, {
   URL: site.url,
   ASSETS: assetsPath,
   CSS: css,
   HEAD_COMMON: headCommon,
   HEADER: header('/brutto-netto-rechner'),
   FOOTER: footer('kostenloser Brutto-Netto-Rechner'),
-  MORE_TOOLS: moreTools('/brutto-netto-rechner'),
+  TOC: tocFor(bnTpl),
+  TOOL_CARDS: toolCards('/brutto-netto-rechner'),
+  ABOUT: about('Die Lohnsteuer wird nach dem Programmablaufplan des Bundesfinanzministeriums berechnet und automatisch gegen dessen amtliche Prüftabellen getestet.'),
   JSONLD: jsonldString(bnJsonld),
   TITLE: esc(bnTitle),
   DESCRIPTION: esc(bnDescription),
@@ -405,6 +431,57 @@ const bnPage = fill(readFileSync(src('brutto-netto-rechner.html'), 'utf8'), {
   SOURCE_PAP: esc(TP.source),
 });
 writeFileSync(join(out, 'brutto-netto-rechner.html'), bnPage);
+
+/* ---------- Industrieminuten-Rechner ---------- */
+const trimDec = (v) => v.toFixed(2).replace(/\.?0+$/, '').replace('.', ',');
+let indRows = '';
+for (let i = 1; i <= 30; i++) {
+  indRows += `<tr>${[i, i + 30].map((m) => `<td>${m}</td><td>${trimDec(m / 0.6)}</td><td>${formatDecimal(m)}</td>`).join('')}</tr>`;
+}
+const dayRows = [234, 360, 420, 450, 456, 462, 468, 480, 495, 510, 525, 540, 600]
+  .map((m) => `<tr><td>${formatHM(m)} h</td><td>${formatDecimal(m)} h</td><td>${trimDec((m * 5) / 60)}&nbsp;h/Woche</td></tr>`).join('');
+const indEx = 465;
+const indValues = { exHM: formatHM(indEx), exDec: formatDecimal(indEx), wage: euro(minWage.cur.value), exPay: formatEuro(wageCents(indEx, minWage.cur.value)) };
+const faqInd = faqIndustrie(indValues);
+const indTitle = 'Industrieminuten-Rechner: Minuten & Industriezeit umrechnen';
+const indDescription = 'Industrieminuten umrechnen: Stunden und Minuten in Industriezeit (Dezimalstunden) und zurück. Mit Formel, Tabelle 1–60 Minuten und Excel-Tipp. Kostenlos.';
+checkMeta(indTitle, indDescription);
+const indTpl = readFileSync(src('industrieminuten-rechner.html'), 'utf8');
+const indPage = fill(indTpl, {
+  URL: site.url,
+  ASSETS: assetsPath,
+  CSS: css,
+  HEAD_COMMON: headCommon,
+  HEADER: header('/industrieminuten-rechner'),
+  FOOTER: footer('kostenloser Industrieminuten-Rechner'),
+  TOC: tocFor(indTpl),
+  TOOL_CARDS: toolCards('/industrieminuten-rechner'),
+  ABOUT: about('Die Umrechnung läuft über denselben automatisch getesteten Rechenkern wie der Arbeitszeitrechner.'),
+  JSONLD: jsonldString(pageGraph({
+    path: '/industrieminuten-rechner',
+    title: indTitle,
+    description: indDescription,
+    faq: faqInd,
+    crumb: 'Industrieminuten-Rechner',
+    app: {
+      name: 'Industrieminuten-Rechner',
+      description: indDescription,
+      applicationCategory: 'UtilitiesApplication',
+      featureList: 'Stunden und Minuten in Industriezeit umrechnen, Industriezeit in Stunden und Minuten umrechnen, Arbeitszeit von–bis mit Pause in Dezimalstunden, Minuten in Industrieminuten, Tabelle 1 bis 60 Minuten',
+    },
+  })),
+  TITLE: esc(indTitle),
+  DESCRIPTION: esc(indDescription),
+  STAND: site.stand,
+  FAQ_HTML: renderFaq(faqInd),
+  IND_TABLE: indRows,
+  DAY_TABLE: dayRows,
+  EX_HM: indValues.exHM,
+  EX_DEC: indValues.exDec,
+  WAGE: indValues.wage,
+  EX_PAY: indValues.exPay,
+});
+writeFileSync(join(out, 'industrieminuten-rechner.html'), indPage);
 
 /* ---------- Unterseiten ---------- */
 function page({ title, description, body, robots = 'index,follow', path }) {
@@ -469,15 +546,16 @@ writeFileSync(join(out, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>
 <url><loc>${site.url}/</loc><lastmod>${lastmod}</lastmod></url>
 <url><loc>${site.url}/stundenlohnrechner</loc><lastmod>${lastmod}</lastmod></url>
 <url><loc>${site.url}/brutto-netto-rechner</loc><lastmod>${lastmod}</lastmod></url>
+<url><loc>${site.url}/industrieminuten-rechner</loc><lastmod>${lastmod}</lastmod></url>
 <url><loc>${site.url}/datenschutz</loc></url>
 <url><loc>${site.url}/kontakt</loc></url>
 </urlset>
 `);
 
 /* ---------- Service Worker (offline) ---------- */
-const precache = ['/', '/stundenlohnrechner', '/brutto-netto-rechner', ...jsFiles.map((f) => `${assetsPath}/${f}`), '/favicon.svg', '/icon-192.png', '/site.webmanifest'];
+const precache = [...TOOLS.map((t) => t.path), ...jsFiles.map((f) => `${assetsPath}/${f}`), '/favicon.svg', '/icon-192.png', '/site.webmanifest'];
 writeFileSync(join(out, 'sw.js'), `// automatisch erzeugt von scripts/build.mjs
-const CACHE = 'azr-${version}-${createHash('sha256').update(index).update(lohnPage).update(bnPage).digest('hex').slice(0, 8)}';
+const CACHE = 'azr-${version}-${createHash('sha256').update(index).update(lohnPage).update(bnPage).update(indPage).digest('hex').slice(0, 8)}';
 const PRECACHE = ${JSON.stringify(precache)};
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting()));

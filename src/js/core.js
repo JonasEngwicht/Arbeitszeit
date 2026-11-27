@@ -46,6 +46,39 @@ export function parseDuration(input) {
 
 export const decimalToMinutes = (h) => Math.round(h * 60);
 export const minutesToDecimal = (m) => Math.round((m / 60) * 100) / 100;
+// Industriezeit: 1 Industriestunde = 100 Industrieminuten, 1 Industrieminute = 0,6 Minuten (36 Sekunden)
+export const minutesToIndustry = (min) => Math.round((min / 60) * 100);
+export const industryToMinutes = (ind) => Math.round(ind * 0.6);
+
+// Normalzeit: "7:45", "745", "7 h 45 min", "7h", "45 min", "8" (= 8 Stunden) → Minuten. Ungültig → null
+export function parseNormalTime(input) {
+  const s = String(input ?? '').trim().toLowerCase();
+  if (!s) return null;
+  const r = s.match(/^(\d{1,3})\s*(?:h|std\.?|stunden?)\s*(?:(\d{1,2})\s*(?:m|min\.?|minuten?)?)?$/);
+  if (r) { const m = +(r[2] || 0); return m > 59 ? null : +r[1] * 60 + m; }
+  if (/^\d{3,4}$/.test(s)) { const m = +s.slice(-2); return m > 59 ? null : +s.slice(0, -2) * 60 + m; }
+  if (/^\d{1,2}$/.test(s)) return +s * 60;
+  const d = parseDuration(s);
+  return d === null || d < 0 ? null : d;
+}
+
+// Dezimalstunden / Industriezeit: "7,75", "7.75", "7,75 h" → Minuten. Ungültig → null
+export function parseDecimalHours(input) {
+  const s = String(input ?? '').trim().toLowerCase().replace(/\s*(h|std\.?|stunden?)$/, '');
+  if (!/^\d*[.,]?\d*$/.test(s) || !/\d/.test(s)) return null;
+  return decimalToMinutes(parseFloat(s.replace(',', '.')));
+}
+
+// Zeitraum von–bis mit Pause (über Mitternacht erlaubt) → { gross, net, nextDay } in Minuten oder null
+export function spanInfo(start, end, breakMin = 0) {
+  const a = parseTime(start);
+  const b = parseTime(end);
+  if (a === null || b === null) return null;
+  const gross = (b - a + DAY) % DAY;
+  const pause = Math.max(0, Math.round(breakMin || 0));
+  if (pause > gross) return null;
+  return { gross, net: gross - pause, pause, nextDay: b < a };
+}
 
 /* ---------- Ausgabe ---------- */
 

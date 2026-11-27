@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}}</title>
+<meta name="description" content="{{DESCRIPTION}}">
+<link rel="canonical" href="{{URL}}/industrieminuten-rechner">
+{{HEAD_COMMON}}
+<meta property="og:type" content="website">
+<meta property="og:locale" content="de_DE">
+<meta property="og:site_name" content="derarbeitszeitrechner.de">
+<meta property="og:title" content="{{TITLE}}">
+<meta property="og:description" content="{{DESCRIPTION}}">
+<meta property="og:url" content="{{URL}}/industrieminuten-rechner">
+<meta property="og:image" content="{{URL}}/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="modulepreload" href="{{ASSETS}}/core.js">
+<link rel="modulepreload" href="{{ASSETS}}/config.js">
+<style>{{CSS}}</style>
+<script type="application/ld+json">{{JSONLD}}</script>
+</head>
+<body>
+<a class="skip" href="#rechner">Zum Rechner springen</a>
+{{HEADER}}
+
+<main id="main">
+<section class="hero" id="rechner" aria-labelledby="h1">
+  <div class="wrap">
+    <h1 id="h1">Industrieminuten-Rechner</h1>
+    <p class="sub">Stunden und Minuten in Industriezeit umrechnen und zurück – mit Formel und Tabelle, kostenlos und ohne Anmeldung</p>
+
+    <div class="card calc money">
+      <div class="panel" id="conv">
+        <h2 class="h-small">Normalzeit und Industriezeit umrechnen</h2>
+        <div class="times">
+          <div class="field">
+            <label for="c-hm">Normalzeit (h:mm)</label>
+            <input id="c-hm" class="in in-time" type="text" inputmode="text" autocomplete="off" value="7:45" aria-describedby="c-hint">
+          </div>
+          <span class="dash" aria-hidden="true">⇄</span>
+          <div class="field">
+            <label for="c-dec">Industriezeit (dezimal)</label>
+            <input id="c-dec" class="in in-time" type="text" inputmode="decimal" autocomplete="off" value="7,75" aria-describedby="c-hint">
+          </div>
+        </div>
+        <p class="hint" id="c-hint">Tippe links oder rechts – das andere Feld rechnet sofort mit.</p>
+        <div class="result" aria-live="polite">
+          <div class="res-main">
+            <div>
+              <div class="res-label" id="c-label">Industriezeit</div>
+              <div class="res-big"><span id="c-out">7,75 h</span></div>
+              <div class="res-dec" id="c-detail">7:45 Stunden = 7,75 Industriestunden</div>
+            </div>
+            <button type="button" class="btn-ghost copy" id="c-copy" aria-label="Ergebnis kopieren">Kopieren</button>
+          </div>
+          <dl class="res-facts">
+            <div><dt>Minuten gesamt</dt><dd id="c-min">465 Min.</dd></div>
+            <div><dt>Industrieminuten gesamt</dt><dd id="c-ind">775</dd></div>
+          </dl>
+        </div>
+      </div>
+
+      <div class="panel" id="span">
+        <h2 class="h-small">Arbeitszeit von–bis in Industriezeit</h2>
+        <div class="times three">
+          <div class="field">
+            <label for="v-start">Beginn</label>
+            <input id="v-start" class="in in-time" type="text" inputmode="numeric" autocomplete="off" value="07:00">
+          </div>
+          <div class="field">
+            <label for="v-end">Ende</label>
+            <input id="v-end" class="in in-time" type="text" inputmode="numeric" autocomplete="off" value="15:45">
+          </div>
+          <div class="field">
+            <label for="v-break">Pause (Min.)</label>
+            <input id="v-break" class="in in-time" type="text" inputmode="numeric" autocomplete="off" value="30">
+          </div>
+        </div>
+        <div class="result" aria-live="polite">
+          <div class="res-main">
+            <div>
+              <div class="res-label">Arbeitszeit in Industriezeit</div>
+              <div class="res-big"><span id="v-out">8,25 h</span></div>
+              <div class="res-dec" id="v-detail">= 8:15 Stunden Arbeitszeit</div>
+            </div>
+            <button type="button" class="btn-ghost copy" id="v-copy" aria-label="Arbeitszeit in Industriezeit kopieren">Kopieren</button>
+          </div>
+          <dl class="res-facts">
+            <div><dt>Arbeitszeit</dt><dd id="v-hm">8:15 h</dd></div>
+            <div><dt>Anwesenheit</dt><dd id="v-gross">8:45 h</dd></div>
+          </dl>
+        </div>
+        <p class="hint">Mehrere Pausen, Woche, Monat und Export: <a href="/">zum Arbeitszeitrechner</a></p>
+      </div>
+
+      <div class="panel" id="minutes">
+        <h2 class="h-small">Minuten in Industrieminuten umrechnen</h2>
+        <div class="times">
+          <div class="field">
+            <label for="m-min">Minuten</label>
+            <input id="m-min" class="in in-time" type="text" inputmode="numeric" autocomplete="off" value="45">
+          </div>
+          <span class="dash" aria-hidden="true">⇄</span>
+          <div class="field">
+            <label for="m-ind">Industrieminuten</label>
+            <input id="m-ind" class="in in-time" type="text" inputmode="decimal" autocomplete="off" value="75">
+          </div>
+        </div>
+        <p class="net-out" id="m-out" aria-live="polite">45 Minuten = 75 Industrieminuten = 0,75 Stunden</p>
+      </div>
+
+      <p class="privacy"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5Zm-3 8V7a3 3 0 1 1 6 0v3H9Z"/></svg> Deine Eingaben bleiben auf deinem Gerät. Nichts wird übertragen oder gespeichert.</p>
+    </div>
+    <ul class="trust" aria-label="Vorteile"><li>Kostenlos</li><li>Ohne Anmeldung</li><li>Beide Richtungen</li><li>Mit Tabelle und Formel</li></ul>
+    <p class="disclaimer">Ergebnis ohne Gewähr. Dezimalwerte sind auf zwei Nachkommastellen gerundet; Zeiterfassungen können anders runden.</p>
+  </div>
+</section>
+
+<div class="wrap content" id="ratgeber">
+<article>
+{{TOC}}
+<section aria-labelledby="h-was">
+<h2 id="h-was">Was sind Industrieminuten?</h2>
+<p>Industrieminuten sind Hundertstelstunden: Eine Stunde hat 100 Industrieminuten statt 60 Minuten. Eine Industrieminute dauert also 36 Sekunden. Die Stunde selbst bleibt gleich lang, sie wird nur anders geteilt. So lässt sich Arbeitszeit als Kommazahl schreiben, zum Beispiel 7,75 Stunden statt 7 Stunden und 45 Minuten.</p>
+<p>Diese Schreibweise heißt Industriezeit, Dezimalzeit oder Dezimalstunden. Zeiterfassungen, Stundenzettel und Lohnabrechnungen nutzen sie, weil sich Kommazahlen leichter addieren und mit dem Stundenlohn multiplizieren lassen. Der Industrieminuten-Rechner oben wandelt jede Zeit live um: von Normalzeit in Industriezeit, von Industriezeit zurück in Stunden und Minuten und als Industrie-Stundenrechner direkt aus Arbeitsbeginn, Arbeitsende und Pause.</p>
+<div class="table-wrap">
+<table class="first-b">
+<caption>Normalzeit und Industriezeit im Vergleich</caption>
+<thead><tr><th scope="col">Normalzeit</th><th scope="col">Industrieminuten</th><th scope="col">Industriezeit</th></tr></thead>
+<tbody>
+<tr><td>15 Minuten</td><td>25</td><td>0,25 h</td></tr>
+<tr><td>30 Minuten</td><td>50</td><td>0,50 h</td></tr>
+<tr><td>45 Minuten</td><td>75</td><td>0,75 h</td></tr>
+<tr><td>60 Minuten</td><td>100</td><td>1,00 h</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<section aria-labelledby="h-formel">
+<h2 id="h-formel">Industrieminuten umrechnen: die Formel</h2>
+<p>Minuten rechnest du in Industrieminuten um, indem du sie durch 60 teilst und mit 100 multiplizierst. Zurück multiplizierst du die Industrieminuten mit 0,6:</p>
+<p class="formula"><strong>Industrieminuten = Minuten ÷ 60 × 100</strong><br><strong>Minuten = Industrieminuten × 0,6</strong></p>
+<h3>Beispiel 1: Normalzeit in Industriezeit</h3>
+<p>Du hast 7 Stunden und 45 Minuten gearbeitet. Die vollen Stunden bleiben stehen, nur die Minuten werden umgerechnet:</p>
+<ul>
+<li>45 Minuten ÷ 60 × 100 = 75 Industrieminuten</li>
+<li>7 Stunden + 75 Industrieminuten = <strong>7,75 Industriestunden</strong></li>
+</ul>
+<h3>Beispiel 2: Industriezeit in Normalzeit</h3>
+<p>Auf deinem Stundenzettel stehen 7,6 Stunden. Du rechnest nur die Nachkommastellen zurück:</p>
+<ul>
+<li>0,6 Stunden = 60 Industrieminuten</li>
+<li>60 Industrieminuten × 0,6 = 36 Minuten, also <strong>7 Stunden und 36 Minuten</strong></li>
+</ul>
+<p>Der häufigste Fehler ist, die Nachkommastellen als Minuten zu lesen: 7,5 Stunden sind 7 Stunden und 30 Minuten, nicht 7 Stunden und 50 Minuten.</p>
+</section>
+
+<section aria-labelledby="h-tabelle">
+<h2 id="h-tabelle">Industrieminuten-Tabelle: 1 bis 60 Minuten</h2>
+<p>Die Tabelle zeigt für jede Minute von 1 bis 60 die Industrieminuten und den Wert in Dezimalstunden. Für eine Zeit wie 6:20 Stunden liest du den Wert für 20 Minuten ab und setzt ihn hinter das Komma: 6,33 Stunden.</p>
+<div class="table-wrap">
+<table class="num-table ind-table">
+<caption>Minuten in Industrieminuten und Industriezeit umrechnen – Tabelle</caption>
+<thead><tr><th scope="col">Min.</th><th scope="col"><abbr title="Industrieminuten">Ind.-Min.</abbr></th><th scope="col">Stunden</th><th scope="col">Min.</th><th scope="col"><abbr title="Industrieminuten">Ind.-Min.</abbr></th><th scope="col">Stunden</th></tr></thead>
+<tbody>{{IND_TABLE}}</tbody>
+</table>
+</div>
+<p>Industrieminuten sind auf zwei Nachkommastellen gerundet, Dezimalstunden ebenfalls. Viele Zeiterfassungen runden auf volle Industrieminuten, dann werden aus 20 Minuten 33 Industrieminuten.</p>
+</section>
+
+<section aria-labelledby="h-arbeitszeit">
+<h2 id="h-arbeitszeit">Arbeitszeit in Industriezeit umrechnen</h2>
+<p>Deine Arbeitszeit in Industriezeit ist die Zeit zwischen Beginn und Ende abzüglich der Pause, geschrieben als Dezimalzahl. Arbeitest du von 7:00 bis 15:45 Uhr mit 30 Minuten Pause, sind das 8:15 Stunden und damit <strong>8,25 Industriestunden</strong>. Der Rechner oben erledigt beide Schritte in einem.</p>
+<p>Typische tägliche Arbeitszeiten und ihre Werte in Industriezeit:</p>
+<div class="table-wrap">
+<table class="first-b">
+<caption>Tägliche Arbeitszeit in Industriezeit – Tabelle</caption>
+<thead><tr><th scope="col">Arbeitszeit (h:mm)</th><th scope="col">Industriezeit</th><th scope="col">Bei 5 Tagen</th></tr></thead>
+<tbody>{{DAY_TABLE}}</tbody>
+</table>
+</div>
+<p>Wenn du deine Zeiten für die ganze Woche oder den Monat erfassen willst, nimm den <a href="/">Arbeitszeitrechner</a>: Er zeigt jedes Ergebnis in Stunden und Minuten und als Dezimalzahl, prüft die Pausen nach Arbeitszeitgesetz und exportiert den Monat als Excel-Datei oder PDF-Stundenzettel.</p>
+</section>
+
+<section aria-labelledby="h-lohn">
+<h2 id="h-lohn">Industriezeit in der Lohnabrechnung</h2>
+<p>In der Lohnabrechnung stehen Industriestunden, weil sich der Lohn damit in einem Schritt ausrechnen lässt: <strong>Lohn = Industriestunden × Stundenlohn</strong>. Für {{EX_HM}} Stunden zum Mindestlohn von {{WAGE}} rechnest du {{EX_DEC}} × {{WAGE}} = <strong>{{EX_PAY}} brutto</strong>. Mit 7 Stunden und 45 Minuten ginge das nicht ohne Umweg.</p>
+<p>Auch beim Addieren hilft die Industriezeit: 7,75 + 8,25 + 7,5 Stunden sind 23,5 Stunden, ohne dass du Minuten über 60 in Stunden umbuchen musst. Welcher Stundenlohn hinter deinem Monatsgehalt steckt, zeigt der <a href="/stundenlohnrechner">Stundenlohnrechner</a>. Was vom Bruttolohn übrig bleibt, rechnet der <a href="/brutto-netto-rechner">Brutto-Netto-Rechner</a> aus.</p>
+</section>
+
+<section aria-labelledby="h-excel">
+<h2 id="h-excel">Industrieminuten in Excel umrechnen</h2>
+<p>In Excel rechnest du eine Uhrzeit in Industriezeit um, indem du sie mit 24 multiplizierst. Excel speichert Zeiten als Bruchteil eines Tages; mal 24 ergibt die Stunden als Dezimalzahl. Angenommen, in A2 steht die Zeit:</p>
+<div class="table-wrap">
+<table>
+<caption>Excel-Formeln für Industriezeit</caption>
+<thead><tr><th scope="col">Zweck</th><th scope="col">Formel</th><th scope="col">Zellformat</th></tr></thead>
+<tbody>
+<tr><td>Normalzeit (7:45) in Industriezeit</td><td><code>=A2*24</code></td><td><code>0,00</code></td></tr>
+<tr><td>Industriezeit (7,75) in Normalzeit</td><td><code>=A2/24</code></td><td><code>[h]:mm</code></td></tr>
+<tr><td>Minuten (45) in Industrieminuten</td><td><code>=A2/60*100</code></td><td><code>0</code></td></tr>
+<tr><td>Industrieminuten (75) in Minuten</td><td><code>=A2*0,6</code></td><td><code>0</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>Wichtig ist das Zellformat: Zeigt Excel nach <code>=A2*24</code> wieder eine Uhrzeit an, stell die Zelle auf „Zahl“ mit zwei Nachkommastellen um.</p>
+</section>
+
+<section aria-labelledby="h-faq" id="faq">
+<h2 id="h-faq">Häufige Fragen</h2>
+{{FAQ_HTML}}
+</section>
+
+{{TOOL_CARDS}}
+
+<section aria-labelledby="h-recht" class="legal-note">
+<h2 id="h-recht">Hinweis</h2>
+<p>Alle Angaben ohne Gewähr. Industrieminuten sind keine gesetzliche Einheit, sondern eine übliche Rechenweise in Zeiterfassung und Lohnabrechnung. Wie dein Arbeitgeber rundet, regeln Arbeitsvertrag, Tarifvertrag oder Betriebsvereinbarung.</p>
+{{ABOUT}}
+<p class="stand">Stand: {{STAND}}</p>
+</section>
+</article>
+</div>
+</main>
+
+{{FOOTER}}
+<script type="module" src="{{ASSETS}}/industrie.js"></script>
+</body>
+</html>
