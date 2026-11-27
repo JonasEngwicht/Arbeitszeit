@@ -2,6 +2,20 @@
 const MAIN = 'derarbeitszeitrechner.de';
 const REDIRECT_HOSTS = new Set(['www.derarbeitszeitrechner.de', 'derstundenrechner.de', 'www.derstundenrechner.de']);
 
+// Naheliegende Schreibweisen → richtige Seite (301)
+const ALIASES = {
+  '/stundenlohn': '/stundenlohnrechner',
+  '/stundenlohn-rechner': '/stundenlohnrechner',
+  '/brutto-netto': '/brutto-netto-rechner',
+  '/bruttonettorechner': '/brutto-netto-rechner',
+  '/gehaltsrechner': '/brutto-netto-rechner',
+  '/industrieminuten': '/industrieminuten-rechner',
+  '/industrieminutenrechner': '/industrieminuten-rechner',
+  '/industriezeit': '/industrieminuten-rechner',
+  '/arbeitszeitrechner': '/',
+  '/stundenrechner': '/',
+};
+
 const SECURITY = {
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
@@ -23,6 +37,8 @@ export default {
     }
     // Saubere URLs: /index.html → /, /impressum.html → /impressum
     if (url.pathname === '/index.html') return Response.redirect(new URL('/', url).toString(), 301);
+    const alias = ALIASES[url.pathname.toLowerCase().replace(/(\.html|\/)$/, '')];
+    if (alias) return Response.redirect(new URL(alias + url.search, url).toString(), 301);
 
     const res = await env.ASSETS.fetch(request);
     const out = new Response(res.body, res);

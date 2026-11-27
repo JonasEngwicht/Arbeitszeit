@@ -31,19 +31,7 @@
 </head>
 <body>
 <a class="skip" href="#rechner">Zum Rechner springen</a>
-<header class="top">
-  <div class="wrap top-in">
-    <a class="brand" href="/" aria-label="derarbeitszeitrechner.de – Startseite">
-      <svg aria-hidden="true" width="26" height="26" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="currentColor"/><circle cx="16" cy="16" r="9" fill="none" stroke="#fff" stroke-width="2.5"/><path d="M16 10.5V16l3.5 2.5" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/></svg>
-      <span>derarbeitszeitrechner<span class="tld">.de</span></span>
-    </a>
-    <nav class="topnav" aria-label="Seitenbereiche">
-      <a href="#ratgeber">Ratgeber</a>
-      <a href="#faq">FAQ</a>
-      {{NAV_TOOLS}}
-    </nav>
-  </div>
-</header>
+{{HEADER}}
 
 <main id="main">
 <section class="hero" id="rechner" aria-labelledby="h1">
@@ -253,7 +241,7 @@
           </div>
           <div class="conv-out" aria-live="polite">= <strong id="z-min-out">0,75</strong> h dezimal</div>
         </div>
-        <p class="hint"><a href="#dezimal-tabelle">Zur Tabelle 1–60 Minuten in Dezimal</a></p>
+        <p class="hint"><a href="#dezimal-tabelle">Zur Tabelle 1–60 Minuten in Dezimal</a> · Arbeitszeit von–bis direkt in Industriezeit: <a href="/industrieminuten-rechner">Industrieminuten-Rechner</a></p>
       </div>
 
       <!-- LOHN -->
@@ -346,12 +334,12 @@
     <ul class="trust" aria-label="Vorteile"><li>Kostenlos</li><li>Ohne Anmeldung</li><li>Daten bleiben im Browser</li><li>Prüfung nach Arbeitszeitgesetz</li></ul>
     <p class="install" id="install-box" hidden><button type="button" class="btn-ghost" id="install">App installieren</button> <span class="hint">Legt den Rechner als App auf deinen Startbildschirm – funktioniert dann auch offline.</span></p>
     <p class="disclaimer">Ergebnis ohne Gewähr, keine Rechtsberatung. Tarifverträge und Betriebsvereinbarungen können abweichen.</p>
-    {{MORE_TOOLS}}
   </div>
 </section>
 
 <div class="wrap content" id="ratgeber">
 <article>
+{{TOC}}
 <section aria-labelledby="h-berechnen">
 <h2 id="h-berechnen">So berechnest du deine Arbeitszeit und Arbeitsstunden</h2>
 <p>Deine Arbeitszeit ist die Zeit zwischen Arbeitsbeginn und Arbeitsende, abzüglich aller Pausen. Um deine Arbeitsstunden zu berechnen, brauchst du also nur drei Angaben: Beginn, Ende und Pausen. So kannst du deine tägliche Arbeitszeit berechnen:</p>
@@ -428,7 +416,7 @@
 <li><strong>Dezimal in Minuten:</strong> Nachkommastellen × 60. Beispiel: 0,8 Stunden × 60 = 48 Minuten.</li>
 </ul>
 <h3>Industrieminuten und Industriestunden umrechnen</h3>
-<p>Dezimalstunden heißen auch Industriezeit. Eine Industriestunde hat 100 Industrieminuten statt 60 Minuten; eine Industrieminute ist also eine Hundertstelstunde und dauert 36 Sekunden. So rechnest du um: <strong>Industrieminuten = Minuten ÷ 60 × 100</strong> und zurück <strong>Minuten = Industrieminuten × 0,6</strong>. Beispiel: 45 Minuten sind 75 Industrieminuten, also 0,75 Stunden. Der Tab „Dezimal“ oben arbeitet als Industrieminuten-Rechner in beide Richtungen.</p>
+<p>Dezimalstunden heißen auch Industriezeit. Eine Industriestunde hat 100 Industrieminuten statt 60 Minuten; eine Industrieminute ist also eine Hundertstelstunde und dauert 36 Sekunden. So rechnest du um: <strong>Industrieminuten = Minuten ÷ 60 × 100</strong> und zurück <strong>Minuten = Industrieminuten × 0,6</strong>. Beispiel: 45 Minuten sind 75 Industrieminuten, also 0,75 Stunden. Der Tab „Dezimal“ oben rechnet in beide Richtungen. Formel, Excel-Tipps und die Tabelle mit Industrieminuten für jede Minute findest du im <a href="/industrieminuten-rechner">Industrieminuten-Rechner</a>.</p>
 <p>Egal ob du ihn als Arbeitszeitrechner dezimal oder als Stundenrechner dezimal nutzt: Das Ergebnis erscheint immer in Stunden und Minuten und als Dezimalzahl. Zum Nachschlagen hier die Tabelle für alle Minuten von 1 bis 60:</p>
 <div class="table-wrap" id="dezimal-tabelle">
 <table class="dec-table">
@@ -477,6 +465,8 @@
 {{FAQ_HTML}}
 </section>
 
+{{TOOL_CARDS}}
+
 <section aria-labelledby="h-recht" class="legal-note">
 <h2 id="h-recht">Rechtshinweis und Quellen</h2>
 <p>Alle Angaben ohne Gewähr und keine Rechtsberatung. Tarifverträge, Betriebsvereinbarungen und Sonderregeln für einzelne Branchen können abweichen. Die Prüfregeln beruhen auf diesen Quellen:</p>
@@ -485,18 +475,14 @@
 <li><a href="https://www.gesetze-im-internet.de/jarbschg/__11.html" rel="noopener">Jugendarbeitsschutzgesetz (JArbSchG), § 11</a></li>
 <li><a href="https://www.bundesregierung.de/breg-de/service/fragen-und-anworten/mindestlohn-faq-1688186" rel="noopener">Bundesregierung: Mindestlohn und Minijob-Grenze</a></li>
 </ul>
+{{ABOUT}}
 <p class="stand">Stand: {{STAND}}</p>
 </section>
 </article>
 </div>
 </main>
 
-<footer class="foot">
-  <div class="wrap foot-in">
-    <p>© {{YEAR}} derarbeitszeitrechner.de – kostenloser Arbeitszeitrechner und Stundenrechner</p>
-    {{FOOT_NAV}}
-  </div>
-</footer>
+{{FOOTER}}
 <div id="print-area" class="print-only" aria-hidden="true"></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script type="module" src="{{ASSETS}}/app.js"></script>
